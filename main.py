@@ -1,6 +1,8 @@
 import discord
 import os
 from dotenv import load_dotenv
+from flask import Flask
+from threading import Thread
 
 load_dotenv()
 
@@ -52,50 +54,17 @@ async def on_message(message):
             await target_channel.send(embeds=embeds, allowed_mentions=allowed_mentions)
         else:
             print(f"channel not found: {TARGET_CHANNEL_ID}")
-    
-    # if message.attachments and any(attachment.content_type.startswith('image')for attachment in message.attachments):
-    #     source_member = message.author
-    #     original_message_content = message.content
-    #     image_urls = [attachment.url for attachment in message.attachments if attachment.content_type.startswith('image')]
-    #     forwarded_message = (
-    #         f"**By** {source_member.mention}\n"
-    #         f"{original_message_content}\n\n"
-    #         + "\n".join(image_urls)
-    #     )
-    #     allowed_mentions = discord.AllowedMentions(users=True)
-    #     target_channel = client.get_channel(TARGET_CHANNEL_ID)
-    #     if target_channel:
-    #         await target_channel.send(forwarded_message, allowed_mentions=allowed_mentions)
-    #     else:
-    #         print(f"channel not found: {TARGET_CHANNEL_ID}")
 
-    # if message.attachments:
-    #     basis = False
-    #     for attachment in message.attachments:
-    #         if attachment.content_type.startswith("image"):
-    #             image_url = attachment.url
-    #             if not basis:
-    #                 source_member = message.author    
-    #                 original_message_content = message.content
-    #                 # embed = discord.Embed(
-    #                 #     title=f"**By** {source_member.display_name}\n",
-    #                 #     description="{source_member.mention}" + f": {original_message_content}" if original_message_content else "",
-    #                 #     color=discord.Color.blue()
-    #                 # )
-    #                 # embed.set_image(url=image_url)
-    #                 forwarded_message = (
-    #                     f"**By** {source_member.mention}\n"
-    #                     f"{original_message_content}\n" if original_message_content else ""
-    #                     f"{image_url}"
-    #                 )
-    #                 basis = True
-    #             else:
-    #                 forwarded_message += f"\n{image_url}"
-    #     allowed_mentions = discord.AllowedMentions(users=True)
-    #     target_channel = client.get_channel(TARGET_CHANNEL_ID)
-    #     if target_channel:
-    #         await target_channel.send(forwarded_message, allowed_mentions=allowed_mentions)
-    #     else:
-    #         print(f"channel not found: {TARGET_CHANNEL_ID}")
+app = Flask('')
+@app.route('/')
+def home():
+    return "I'm alive"
+def run():
+    app.run(host='0.0.0.0', port=8080)
+def keep_alive():
+    server = Thread(target=run)
+    server.start()
+
+keep_alive()
 
 client.run(TOKEN)
