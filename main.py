@@ -109,12 +109,13 @@ def repeat(message):
     if any(word == message.content for word in REPEAT_CHARACTERS):
         return True
     elif len(message.content) > 1:
-        return
-    else:
+        return False
+    elif len(message.content) == 1:
         char = message.content[0]
         charset = unicodedata.category(char)
         if charset in ("So", "Sk", "Cf"):
             return True
+    return False
     
 def trigger(message):
     if any(word in message.content for word in TRIGGER_WORDS) or any(word == message.content for word in TRIGGER_MESSAGE):
