@@ -97,8 +97,11 @@ TRIGGER_MESSAGE = ["春"]
 REPLY_WORDS = ["春", "春同", "春同一根", "春同一根捏", "不会给春同很多很好的评价"]
 
 def update_words():
+    global REPLY_WORDS
+    xs = REPLY_WORDS.copy()
     for word in REPLY_WORDS:
-        REPLY_WORDS.append(word.replace("春", "蠢"))
+        xs.append(word.replace("春", "蠢"))
+    REPLY_WORDS = xs
 
 REPEAT_CHARACTERS = ["？", "?", "……"]
 
