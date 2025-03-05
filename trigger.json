@@ -21,7 +21,12 @@
         ],
         "惹": [
             "惹"
-        ],
+        ]
+    },
+    "trigger_words_rec": {
+        "素": "惹"
+    },
+    "trigger_message": {
         "？": [
             ":question:",
             ":grey_question:",
@@ -29,7 +34,7 @@
             "?"
         ]
     },
-    "trigger_words_rec": {
+    "trigger_message_rec": {
         "?": "？"
     },
     "repeat_words": [
