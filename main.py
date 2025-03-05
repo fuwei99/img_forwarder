@@ -134,14 +134,16 @@ async def reload_word_list(ctx):
 
 def load_words():
     global TRIGGER_WORDS, TRIGGER_MESSAGE, REPEAT_MESSAGES
-    with open("trigger.json", "r") as f:
+    with open("trigger.json", "r", encoding="utf-8") as f:
         words = json.load(f)
     TRIGGER_WORDS = words.get("trigger_words")
-    for w, k in words.get("trigger_words_rec"):
+    # 字典
+
+    for w, k in words.get("trigger_words_rec").items():
         if TRIGGER_WORDS.get(k):
             TRIGGER_WORDS[w] = TRIGGER_WORDS[k]
     TRIGGER_MESSAGE = words.get("trigger_message")
-    for w, k in words.get("trigger_message_rec"):
+    for w, k in words.get("trigger_message_rec").items():
         if TRIGGER_MESSAGE.get(k):
             TRIGGER_MESSAGE[w] = TRIGGER_MESSAGE[k]
     REPEAT_MESSAGES = set(words.get("repeat_messages"))
