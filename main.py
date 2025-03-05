@@ -106,9 +106,9 @@ TRIGGER_MESSAGE = {}
 REPEAT_MESSAGES = set()
 
 
-@bot.command(name="async_command", description="Sync commands.")
+@bot.command(name="sync_commands", description="Sync commands.")
 @commands.has_permissions(administrator=True)
-async def async_command(ctx):
+async def sync_commands(ctx):
     synced = await bot.tree.sync()
     await ctx.send(f"Synced {synced} commands")
 
