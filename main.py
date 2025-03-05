@@ -148,8 +148,16 @@ def load_words():
     REPEAT_MESSAGES = set(words.get("repeat_messages"))
 
 
+def is_emoji(s):
+    charset = unicodedata.category(s)
+    return charset in ("So", "Sk", "Cf")
+
+
 def repeat(message):
     if message.content in REPEAT_MESSAGES:
+        return True
+    splitted = message.content.split("\n")
+    if all(len(s) == 1 and is_emoji(s) for s in splitted):
         return True
     return False
 
