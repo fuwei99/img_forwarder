@@ -229,7 +229,7 @@ async def on_message(message):
 
     tw = trigger_word(message)
     if tw is not None:
-        await message.channel.send(TRIGGER_WORDS[tw])
+        await message.channel.send(random.choice(TRIGGER_WORDS[tw]))
         return
 
 
