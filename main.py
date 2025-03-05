@@ -16,6 +16,7 @@ TOKEN = config.get("token")
 TARGET_CHANNEL_ID = config.get("target_channel_id")
 SOURCE_CHANNEL_ID = config.get("source_channel_id")
 CHAT_CHANNEL_ID = config.get("chat_channel_id")
+BACKUP_CHANNEL_ID = config.get("backup_channel_id")
 GEMINI_KEYS = config.get("gemini_keys")
 NUM = len(GEMINI_KEYS)
 
@@ -43,6 +44,7 @@ intents.message_content = True
 intents.members = True
 client = discord.Client(intents=intents)
 bot = commands.Bot(command_prefix='!', intents=intents)
+tree = app_commands.Tree(bot)
 
 available_models = {
     "pro": "gemini-2.0-pro-exp-02-05",
@@ -97,12 +99,31 @@ TRIGGER_WORDS = {}
 TRIGGER_MESSAGE = {}
 REPEAT_MESSAGES = set()
 
+#管理员命令 asyncCommand 同步slash命令
+@bot.command(name='asyncCommand')
+@commands.has_permissions(administrator=True)
+@app_commands.describe(message = "Async slash commands.")
+async def asyncCommand(ctx):
+    synced = await bot.tree.sync()
+    await ctx.send(f"Synced {synced} commands")
+
 #管理员命令 reloadWordList 重新加载词库
-@bot.command(name='reloadWordList')
+@bot.hybrid_command(name='reloadWordList', description="Reload the word list.")
 @commands.has_permissions(administrator=True)
 async def reloadWordList(ctx):
     load_words()
     await ctx.send("Word list reloaded.")
+    
+#备份命令 backup 备份聊天记录
+#通过回复消息触发
+# @bot.hybrid_command(name='backup', description="Backup the message you're replying to.")
+# async def backup(ctx):
+#     if BACKUP_CHANNEL_ID is None or not isinstance(BACKUP_CHANNEL_ID, discord.TextChannel()):
+#         await ctx.send("Backup channel does not exist or is not a text channel.", ephemeral=True)
+#         return
+#     if ctx.message.reference and ctx.message.message_id:
+#         original_message = await ctx.fetch_message(ctx.message.reference.message_id)
+        
 
 def load_words():
     global TRIGGER_WORDS, TRIGGER_MESSAGE, REPEAT_MESSAGES
