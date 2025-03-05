@@ -106,19 +106,17 @@ TRIGGER_MESSAGE = {}
 REPEAT_MESSAGES = set()
 
 
-# 管理员命令 asyncCommand 同步slash命令
-@bot.command(name="asyncCommand")
+@bot.command(name="async_command")
 @commands.has_permissions(administrator=True)
 @app_commands.describe(message="Async slash commands.")
-async def asyncCommand(ctx):
+async def async_command(ctx):
     synced = await bot.tree.sync()
     await ctx.send(f"Synced {synced} commands")
 
 
-# 管理员命令 reloadWordList 重新加载词库
-@bot.hybrid_command(name="reloadWordList", description="Reload the word list.")
+@bot.hybrid_command(name="reload_word_list", description="Reload the word list.")
 @commands.has_permissions(administrator=True)
-async def reloadWordList(ctx):
+async def reload_word_list(ctx):
     load_words()
     await ctx.send("Word list reloaded.")
 
