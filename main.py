@@ -15,38 +15,39 @@ config = load_config()
 TOKEN = config.get("token")
 TARGET_CHANNEL_ID = config.get("target_channel_id")
 SOURCE_CHANNEL_ID = config.get("source_channel_id")
+CHAT_CHANNEL_ID = config.get("chat_channel_id")
 GEMINI_KEYS = config.get("gemini_keys")
 NUM = len(GEMINI_KEYS)
 
 CURRENT_GEMINI_PRO_KEY = config.get("current_gemini_pro_key")
 CURRENT_GEMINI_FLASH_KEY = config.get("current_gemini_flash_key")
 
-# def get_gemini_key(model):
-#     if model == "gemini-2.0-pro-exp-02-05":
-#         CURRENT_GEMINI_PRO_KEY += 1
-#         CURRENT_GEMINI_PRO_KEY %= NUM
-#         config["current_gemini_pro_key"] = CURRENT_GEMINI_PRO_KEY
-#         with open('config.json', 'w') as f:
-#             json.dump(config, f)
-#         return GEMINI_KEYS[CURRENT_GEMINI_PRO_KEY]
-#     else:
-#         CURRENT_GEMINI_FLASH_KEY += 1
-#         CURRENT_GEMINI_FLASH_KEY %= NUM
-#         config["current_gemini_flash_key"] = CURRENT_GEMINI_FLASH_KEY
-#         with open('config.json', 'w') as f:
-#             json.dump(config, f)
-#         return GEMINI_KEYS[CURRENT_GEMINI_FLASH_KEY]
+def get_gemini_key(model):
+    if model == "gemini-2.0-pro-exp-02-05":
+        CURRENT_GEMINI_PRO_KEY += 1
+        CURRENT_GEMINI_PRO_KEY %= NUM
+        config["current_gemini_pro_key"] = CURRENT_GEMINI_PRO_KEY
+        with open('config.json', 'w') as f:
+            json.dump(config, f)
+        return GEMINI_KEYS[CURRENT_GEMINI_PRO_KEY]
+    else:
+        CURRENT_GEMINI_FLASH_KEY += 1
+        CURRENT_GEMINI_FLASH_KEY %= NUM
+        config["current_gemini_flash_key"] = CURRENT_GEMINI_FLASH_KEY
+        with open('config.json', 'w') as f:
+            json.dump(config, f)
+        return GEMINI_KEYS[CURRENT_GEMINI_FLASH_KEY]
 
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
 client = discord.Client(intents=intents)
-# bot = commands.Bot(command_prefix='!', intents=intents)
+bot = commands.Bot(command_prefix='!', intents=intents)
 
-# available_models = {
-#     "pro": "gemini-2.0-pro-exp-02-05",
-#     "flash": "gemini-2.0-flash",
-# }
+available_models = {
+    "pro": "gemini-2.0-pro-exp-02-05",
+    "flash": "gemini-2.0-flash",
+}
 
 # def generate(prompt, model):
 #     api_key = get_gemini_key(model)
@@ -92,37 +93,49 @@ client = discord.Client(intents=intents)
 async def on_ready():
     print(f"logged in as {client.user}")
 
-TRIGGER_WORDS = ["春同", "蠢"]
-TRIGGER_MESSAGE = ["春"]
-REPLY_WORDS = ["春", "春同", "春同一根", "春同一根捏", "不会给春同很多很好的评价"]
+TRIGGER_WORDS = {}
+TRIGGER_MESSAGE = {}
+REPEAT_MESSAGES = set()
 
-def update_words():
-    global REPLY_WORDS
-    xs = REPLY_WORDS.copy()
-    for word in REPLY_WORDS:
-        xs.append(word.replace("春", "蠢"))
-    REPLY_WORDS = xs
+#管理员命令 reloadWordList 重新加载词库
+@bot.command(name='reloadWordList')
+@commands.has_permissions(administrator=True)
+async def reloadWordList(ctx):
+    load_words()
+    await ctx.send("Word list reloaded.")
 
-REPEAT_CHARACTERS = ["？", "?", "……"]
+def load_words():
+    global TRIGGER_WORDS, TRIGGER_MESSAGE, REPEAT_MESSAGES
+    with open('trigger.json', 'r') as f:
+        words = json.load(f)
+    TRIGGER_WORDS = words.get("trigger_words")
+    for w, k in words.get("trigger_words_rec"):
+        if TRIGGER_WORDS.get(k):
+            TRIGGER_WORDS[w] = TRIGGER_WORDS[k]
+    TRIGGER_MESSAGE = words.get("trigger_message")
+    for w, k in words.get("trigger_message_rec"):
+        if TRIGGER_MESSAGE.get(k):
+            TRIGGER_MESSAGE[w] = TRIGGER_MESSAGE[k]
+    REPEAT_MESSAGES = set(words.get("repeat_messages"))
 
 def repeat(message):
-    if any(word == message.content for word in REPEAT_CHARACTERS):
+    if message.content in REPEAT_MESSAGES:
         return True
-    elif len(message.content) > 1:
-        return False
-    elif len(message.content) == 1:
-        char = message.content[0]
-        charset = unicodedata.category(char)
-        if charset in ("So", "Sk", "Cf"):
-            return True
     return False
     
-def trigger(message):
-    if any(word in message.content for word in TRIGGER_WORDS) or any(word == message.content for word in TRIGGER_MESSAGE):
+def trigger_message(message):
+    if message.content in TRIGGER_MESSAGE.keys():
         return True
     return False
 
-async def forward_images(message):
+# 查找触发词
+def trigger_word(message):
+    for w in TRIGGER_WORDS.keys():
+        if w in message.content:
+            return w
+    return None
+
+async def try_forward_images(message):
     if message.channel.id != SOURCE_CHANNEL_ID:
         return
 
@@ -156,23 +169,27 @@ async def forward_images(message):
 
 @client.event
 async def on_message(message):
+    # bot do not respond to itself
     if message.author == client.user:
         return
-
+    
+    await try_forward_images(message)
+    
+    if CHAT_CHANNEL_ID is None or message.channel.id != CHAT_CHANNEL_ID:
+        return
+    
     if repeat(message):
-        source_channel = client.get_channel(message.channel.id)
-        if source_channel:
-            await source_channel.send(message.content)
-            return
+        await message.channel.send(message.content)
+        return
     
-    if trigger(message):
-        source_channel = client.get_channel(message.channel.id)
-        if source_channel:
-            await source_channel.send(random.choice(REPLY_WORDS))
-            return
-    
-    await forward_images(message)
+    if trigger_message(message):
+        await message.channel.send(random.choice(TRIGGER_MESSAGE[message.content]))
+        return
 
+    tw = trigger_word(message)
+    if tw is not None:
+        await message.channel.send(TRIGGER_WORDS[tw])
+        return
 
-update_words()
+load_words()
 client.run(TOKEN)
