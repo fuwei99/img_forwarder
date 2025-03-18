@@ -1,7 +1,8 @@
 from discord.ext import commands
 import discord
-import json
 import unicodedata
+
+from utils.func import resolve_config, get_words
 
 
 class KeywordResponder(commands.Cog):
@@ -98,3 +99,19 @@ class KeywordResponder(commands.Cog):
             return
         await self.try_forward_images(message)
         await self.try_auto_reply(message)
+
+
+async def setup(
+    bot: commands.Bot,
+):
+    config = resolve_config()
+    target_channel_id = config.get("target_channel_id")
+    source_channel_id = config.get("source_channel_id")
+    chat_channel_id = config.get("chat_channel_id")
+    words = get_words()
+    await bot.add_cog(
+        KeywordResponder(
+            bot, target_channel_id, source_channel_id, chat_channel_id, words
+        )
+    )
+    print("KeywordResponder cog loaded.")
