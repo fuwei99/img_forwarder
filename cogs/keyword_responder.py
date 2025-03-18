@@ -5,18 +5,18 @@ import unicodedata
 
 
 class KeywordResponder(commands.Cog):
-    def __init__(self, bot, target_channel_id, source_channel_id, chat_channel_id):
+    def __init__(
+        self, bot, target_channel_id, source_channel_id, chat_channel_id, words
+    ):
         self.bot = bot
         self.target_channel_id = target_channel_id
         self.source_channel_id = source_channel_id
         self.chat_channel_id = chat_channel_id
         self.trigger_words, self.trigger_message, self.repeat_messages = (
-            self.load_words()
+            self.load_words(words)
         )
 
-    def load_words():
-        with open("trigger.json", "r", encoding="utf-8") as f:
-            words = json.load(f)
+    def load_words(words):
         trigger_words = words.get("trigger_words")
         for w, k in words.get("trigger_words_rec").items():
             if trigger_words.get(k):

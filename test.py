@@ -50,9 +50,13 @@ bot = commands.Bot(command_prefix=".", intents=intents)
 
 
 async def main():
+    with open("trigger.json", "r", encoding="utf-8") as f:
+        words = json.load(f)
     await bot.add_cog(MyCommands(bot))
     await bot.add_cog(
-        KeywordResponder(bot, target_channel_id, source_channel_id, chat_channel_id)
+        KeywordResponder(
+            bot, target_channel_id, source_channel_id, chat_channel_id, words
+        )
     )
     await bot.start(token)
 
