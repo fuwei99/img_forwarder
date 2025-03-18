@@ -47,7 +47,6 @@ def get_gemini_key(model):
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
-client = discord.Client(intents=intents)
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 available_models = {
@@ -56,9 +55,9 @@ available_models = {
 }
 
 
-@client.event
+@bot.event
 async def on_ready():
-    print(f"logged in as {client.user}")
+    print(f"logged in as {bot.user}")
 
 
 TRIGGER_WORDS = {}
@@ -182,7 +181,7 @@ async def try_forward_images(message):
             print(f"channel not found: {TARGET_CHANNEL_ID}")
 
 
-@client.event
+@bot.event
 async def on_message(message):
     # bot do not respond to itself
     if message.author == client.user:
@@ -208,4 +207,4 @@ async def on_message(message):
 
 
 load_words()
-client.run(TOKEN)
+bot.run(TOKEN)
