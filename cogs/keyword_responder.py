@@ -1,6 +1,8 @@
 from discord.ext import commands
 import discord
 import unicodedata
+import random
+from typing import Tuple
 
 from utils.func import resolve_config, get_words, cpt
 
@@ -17,7 +19,7 @@ class KeywordResponder(commands.Cog):
             self.load_words(words)
         )
 
-    def load_words(self, words):
+    def load_words(self, words) -> Tuple[dict, dict, set]:
         trigger_words = words.get("trigger_words")
         for w, k in words.get("trigger_words_rec").items():
             if trigger_words.get(k):
@@ -34,20 +36,19 @@ class KeywordResponder(commands.Cog):
         charset = unicodedata.category(s)
         return charset in ("So", "Sk", "Cf")
 
-    def repeat(self, message):
+    def in_repeat(self, message):
         if message.content in self.repeat_messages:
             return True
-        splitted = message.content.split("\n")
-        if all(len(s) == 1 and self.is_emoji(s) for s in splitted):
+        if len(message.content) == 1 and self.is_emoji(message.content):
             return True
         return False
 
-    def trigger_message(self, message):
+    def in_trigger_message(self, message):
         if message.content in self.trigger_message.keys():
             return True
         return False
 
-    def trigger_word(self, message):
+    def in_trigger_word(self, message):
         for w in self.trigger_words.keys():
             if w in message.content:
                 return w
@@ -56,14 +57,16 @@ class KeywordResponder(commands.Cog):
     async def try_auto_reply(self, message):
         if message.channel.id != self.chat_channel_id:
             return
-        if self.trigger_message(message):
-            await message.channel.send(self.trigger_message[message.content])
+        if self.in_trigger_message(message):
+            await message.channel.send(
+                random.choice(self.trigger_message(message.content))
+            )
             return
-        w = self.trigger_word(message)
+        w = self.in_trigger_word(message)
         if w:
-            await message.channel.send(self.trigger_words[w])
+            await message.channel.send(random.choice(self.trigger_words[w]))
             return
-        if self.repeat(message):
+        if self.in_repeat(message):
             await message.channel.send(message.content)
             return
 
