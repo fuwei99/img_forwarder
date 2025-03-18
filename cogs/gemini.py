@@ -183,10 +183,10 @@ class Gemini(commands.Cog):
         model_config.system_instruction = system_prompt
         instructions = "Now answer to the question naturally like a human, don't use phrases like 'according to the context' since human don't talk like that."
         time = self.get_time()
-        prompt = f"Chat context: \n{{{context}}}"
+        prompt = f"Chat context: {{\n{context}\n}}"
         prompt += f"\n\nQuestion from {ctx.message.author.display_name} ({ctx.message.author.name}): {question}"
         if ctx.message.reference is not None:
-            prompt += f"\n\nQuestion directly related to message: \n{{{message.author.display_name} ({message.author.name}): {message.content}}}"
+            prompt += f"\n\nQuestion directly related to message: {{\n{message.author.display_name} ({message.author.name}): {message.content}\n}}"
         prompt += f"\n\nCurrent time: {time}"
         prompt += f"\n\nAdditional instructions: {instructions}"
         prompt += f"\n\nAnswer to {ctx.message.author.display_name} ({ctx.message.author.name}):"
@@ -221,8 +221,8 @@ class Gemini(commands.Cog):
         )
         time = self.get_time()
         instructions = "Remember, you only need to supply the translation which fits the context in a suitable tone, don't give any additional information!"
-        prompt = f"Chat context: \n{{{context}}}"
-        prompt += f"\n\nMessage to translate: \n{{{message.author.display_name} ({message.author.name}): {message.content}}}"
+        prompt = f"Chat context: {{\n{context}\n}}"
+        prompt += f"\n\nMessage to translate: {{\n{message.author.display_name} ({message.author.name}): {message.content}\n}}"
         prompt += f"\n\nCurrent time: {time}"
         prompt += f"\n\nAdditional instructions: {instructions}"
         prompt += f"\n\n{target_language} translation for {ctx.message.author.display_name} ({ctx.message.author.name}):"
