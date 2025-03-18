@@ -52,6 +52,20 @@ class KeywordResponder(commands.Cog):
                 return w
         return None
 
+    async def try_auto_reply(self, message):
+        if message.channel.id != self.chat_channel_id:
+            return
+        if self.trigger_message(message):
+            await message.channel.send(self.trigger_message[message.content])
+            return
+        w = self.trigger_word(message)
+        if w:
+            await message.channel.send(self.trigger_words[w])
+            return
+        if self.repeat(message):
+            await message.channel.send(message.content)
+            return
+
     async def try_forward_images(self, message):
         if message.channel.id != self.source_channel_id:
             return
@@ -82,13 +96,5 @@ class KeywordResponder(commands.Cog):
     async def on_message(self, message):
         if message.author.bot:
             return
-        if message.channel.id != self.chat_channel_id:
-            return
-        if self.repeat(message):
-            await message.channel.send(message.content)
-        if self.trigger_message(message):
-            await message.channel.send(self.trigger_message[message.content])
-        w = self.trigger_word(message)
-        if w:
-            await message.channel.send(self.trigger_words[w])
         await self.try_forward_images(message)
+        await self.try_auto_reply(message)

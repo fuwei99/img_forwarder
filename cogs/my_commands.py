@@ -7,6 +7,10 @@ class MyCommands(commands.Cog):
         self.bot = bot
         self.backup_channel_id = backup_channel_id
 
+    @commands.hybrid_command(name="ping", description="Check the bot's latency.")
+    async def ping(self, ctx: commands.Context):
+        await ctx.send(f"Pong! {round(self.bot.latency * 1000)}ms")
+
     @commands.hybrid_command(name="backup", description="Back up a message.")
     async def backup(self, ctx: commands.Context):
         if ctx.message.reference is None:
@@ -18,6 +22,14 @@ class MyCommands(commands.Cog):
         if not isinstance(ctx.message.reference.resolved, discord.Message):
             await ctx.send("The message you replied to is not a message.")
             return
+        for reaction in ctx.message.reference.resolved.reactions:
+            if reaction.emoji == "📨" and reaction.me:
+                await ctx.send(
+                    "This message has already been backed up.",
+                    delete_after=5,
+                    ephemeral=True,
+                )
+                return
 
         original_message = ctx.message.reference.resolved
 
@@ -28,7 +40,7 @@ class MyCommands(commands.Cog):
         )
         embed.set_author(
             name=original_message.author.display_name,
-            icon_url=original_message.author.avatar_url,
+            icon_url=original_message.author.avatar,
         )
         embed.add_field(
             name="Original message",
@@ -36,13 +48,22 @@ class MyCommands(commands.Cog):
             inline=True,
         )
 
-        if original_message.attachments:
-            embed.set_image(url=original_message.attachments[0].url)
+        embeds = [embed]
+        files = []
+        for attachment in original_message.attachments:
+            if attachment.content_type.startswith("image"):
+                new_embed = discord.Embed()
+                new_embed.set_image(url=attachment.url)
+                embeds.append(new_embed)
+            else:
+                file = await attachment.to_file()
+                files.append(file)
 
         backup_channel = self.bot.get_channel(self.backup_channel_id)
         if backup_channel is None:
             await ctx.send("The backup channel could not be found.")
             return
-        await backup_channel.send(embed=embed)
+        if embeds or files:
+            await backup_channel.send(embeds=embeds, files=files)
         # 加一个备份符号
         await original_message.add_reaction("📨")
