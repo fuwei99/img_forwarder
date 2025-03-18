@@ -20,12 +20,76 @@ class Gemini(commands.Cog):
         self.system_prompt = ""
         self.config = config
         self.context_length = 20
+        self.default_gemini_config = types.GenerateContentConfig(
+            system_instruction=self.system_prompt,
+            top_k=55,
+            top_p=0.95,
+            temperature=1,
+            safety_settings=[
+                types.SafetySetting(
+                    category=types.HarmCategory.HARM_CATEGORY_CIVIC_INTEGRITY,
+                    threshold=types.HarmBlockThreshold.OFF,
+                ),
+                types.SafetySetting(
+                    category=types.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+                    threshold=types.HarmBlockThreshold.OFF,
+                ),
+                types.SafetySetting(
+                    category=types.HarmCategory.HARM_CATEGORY_HARASSMENT,
+                    threshold=types.HarmBlockThreshold.OFF,
+                ),
+                types.SafetySetting(
+                    category=types.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+                    threshold=types.HarmBlockThreshold.OFF,
+                ),
+                types.SafetySetting(
+                    category=types.HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+                    threshold=types.HarmBlockThreshold.OFF,
+                ),
+            ],
+        )
 
     def get_next_key(self):
         self.current_key = (self.current_key + 1) % self.num
         self.config["current_key"] = self.current_key
         write_config(self.config)
         return self.apikeys[self.current_key]
+
+    async def get_context_for_prompt(self, ctx: commands.Context, context_length: int):
+        context_msg = []
+        async for msg in ctx.channel.history(
+            limit=context_length + 1, before=ctx.message
+        ):
+            context_msg.append(f"{msg.author.name}: {msg.content}")
+        context_msg.reverse()
+        return "\n".join(context_msg)
+
+    async def request_gemini(self, ctx: commands.Context, prompt: str, key: str):
+        client = genai.Client(api_key=key)
+        msg = await ctx.send("Thinking...")
+        full = ""
+        every_two_chunk = False
+        try:
+            response = (
+                client.models.generate_content_stream(
+                    model="gemini-2.0-pro-exp-02-05",
+                    contents=[prompt],
+                    config=self.default_gemini_config,
+                ),
+            )
+
+            for chunk in response:
+                if chunk.text:
+                    print(chunk.text)
+                    full += chunk.text
+                    if every_two_chunk:
+                        await msg.edit(content=full)
+                        every_two_chunk = False
+                    else:
+                        every_two_chunk = True
+            await msg.edit(content=full)
+        except Exception as e:
+            print(e)
 
     @commands.hybrid_command(name="hey", description="Ask a question to gemini.")
     async def hey(
@@ -46,65 +110,12 @@ class Gemini(commands.Cog):
             ctx.send("I apologize, but……", delete_after=5, ephemeral=True)
             return
         key = self.get_next_key()
-        context_msg = []
-        async for msg in ctx.channel.history(
-            limit=context_length + 1, before=ctx.message
-        ):
-            context_msg.append(f"{msg.author.name}: {msg.content}")
-        context_msg.reverse()
-        context = "\n".join(context_msg)
-        # 获取提问者的名字
-        prompt = f"Chat context: \n{{{context}}} \n\nQuestion from {ctx.message.author.name}: {question} \n\nAnswer to {ctx.message.author.name}:"
-        client = genai.Client(api_key=key)
-        msg = await ctx.send("Thinking...")
-        full = ""
-        every_two_chunk = False
-        try:
-            response = client.models.generate_content_stream(
-                model="gemini-2.0-pro-exp-02-05",
-                contents=[prompt],
-                config=types.GenerateContentConfig(
-                    system_instruction=self.system_prompt,
-                    top_k=55,
-                    top_p=0.95,
-                    temperature=1,
-                    safety_settings=[
-                        types.SafetySetting(
-                            category=types.HarmCategory.HARM_CATEGORY_CIVIC_INTEGRITY,
-                            threshold=types.HarmBlockThreshold.OFF,
-                        ),
-                        types.SafetySetting(
-                            category=types.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
-                            threshold=types.HarmBlockThreshold.OFF,
-                        ),
-                        types.SafetySetting(
-                            category=types.HarmCategory.HARM_CATEGORY_HARASSMENT,
-                            threshold=types.HarmBlockThreshold.OFF,
-                        ),
-                        types.SafetySetting(
-                            category=types.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
-                            threshold=types.HarmBlockThreshold.OFF,
-                        ),
-                        types.SafetySetting(
-                            category=types.HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-                            threshold=types.HarmBlockThreshold.OFF,
-                        ),
-                    ],
-                ),
-            )
-            for chunk in response:
-                if chunk.text:
-                    print(chunk.text)
-                    full += chunk.text
-                    if every_two_chunk:
-                        await msg.edit(content=full)
-                        every_two_chunk = False
-                    else:
-                        every_two_chunk = True
-            await msg.edit(content=full)
-        except Exception as e:
-            print(e)
+        context = await self.get_context_for_prompt(ctx, context_length)
+        constructions = "Now answer to the question naturally like a human, don't use phrases like 'according to the context' since human don't talk like that."
+        prompt = f"Chat context: \n{{{context}}} \n\nQuestion from {ctx.message.author.name}: {question} \n\n Additional constructions: {constructions}\n\nAnswer to {ctx.message.author.name}:"
+        await self.request_gemini(ctx, prompt, key)
 
+    @commands.hybrid_command(name="translate", description="Translate a text.")
     @commands.hybrid_command(name="set_prompt", description="Set the system prompt.")
     @commands.is_owner()
     @auto_delete(delay=0)
