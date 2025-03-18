@@ -3,6 +3,7 @@ import discord
 from google import genai
 from google.genai import types
 import pytz
+import random
 from datetime import datetime
 from utils.decorator import auto_delete
 
@@ -61,6 +62,9 @@ class Gemini(commands.Cog):
         self.config["current_key"] = self.current_key
         write_config(self.config)
         return self.apikeys[self.current_key]
+
+    def get_random_key(self):
+        return self.apikeys[random.randint(0, self.num - 1)]
 
     async def get_context_for_prompt(
         self,
@@ -121,7 +125,10 @@ class Gemini(commands.Cog):
     ):
         if model_config is None:
             model_config = self.default_gemini_config
-        key = self.get_next_key()
+        if model != "gemini-2.0-pro-exp-02-05":
+            key = self.get_random_key()
+        else:
+            key = self.get_next_key()
         client = genai.Client(api_key=key)
         msg = await ctx.send("Thinking...")
         full = ""
