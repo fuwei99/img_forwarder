@@ -174,7 +174,7 @@ async def try_forward_images(message):
                     embed.set_image(url=attachment.url)
                     embeds.append(embed)
         allowed_mentions = discord.AllowedMentions(users=True)
-        target_channel = client.get_channel(TARGET_CHANNEL_ID)
+        target_channel = bot.get_channel(TARGET_CHANNEL_ID)
         if target_channel:
             await target_channel.send(embeds=embeds, allowed_mentions=allowed_mentions)
         else:
@@ -184,7 +184,7 @@ async def try_forward_images(message):
 @bot.event
 async def on_message(message):
     # bot do not respond to itself
-    if message.author == client.user:
+    if message.author == bot.user:
         return
 
     await try_forward_images(message)
