@@ -70,12 +70,10 @@ class Gemini(commands.Cog):
         full = ""
         every_two_chunk = False
         try:
-            response = (
-                client.models.generate_content_stream(
-                    model="gemini-2.0-pro-exp-02-05",
-                    contents=[prompt],
-                    config=self.default_gemini_config,
-                ),
+            response = client.models.generate_content_stream(
+                model="gemini-2.0-pro-exp-02-05",
+                contents=[prompt],
+                config=self.default_gemini_config,
             )
 
             for chunk in response:
