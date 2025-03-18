@@ -76,6 +76,7 @@ async def sync_commands(ctx):
 # 加一个测试命令foo bar
 @bot.command(name="foo", description="bar")
 async def foo(ctx):
+    print("yes")
     await ctx.send("bar")
 
 
