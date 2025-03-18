@@ -24,7 +24,7 @@ class Gemini(commands.Cog):
         self.context_length = 20
         self.target_language = "Chinese"
         self.default_gemini_config = types.GenerateContentConfig(
-            system_instruction=self.system_prompt,
+            system_instruction="",
             top_k=55,
             top_p=0.95,
             temperature=1,
@@ -73,7 +73,15 @@ class Gemini(commands.Cog):
         context_msg.reverse()
         return "\n".join(context_msg)
 
-    async def request_gemini(self, ctx: commands.Context, prompt: str, key: str):
+    async def request_gemini(
+        self,
+        ctx: commands.Context,
+        prompt: str,
+        model_config: types.GenerateContentConfig = None,
+    ):
+        if model_config is None:
+            model_config = self.default_gemini_config
+        key = self.get_next_key()
         client = genai.Client(api_key=key)
         msg = await ctx.send("Thinking...")
         full = ""
@@ -113,10 +121,12 @@ class Gemini(commands.Cog):
             if nickname is None:
                 nickname = ctx.guild.me.name
             self.system_prompt = f"You are {nickname}, a helpful AI assistant. You are assisting a user in a discord server. The user asks you a question, and you provide a helpful response. The user may ask you anything. You always speak Chinese unless the question specifies otherwise."
+        system_prompt = self.system_prompt
         if ctx.channel.id != self.chat_channel_id:
             ctx.send("I apologize, but……", delete_after=5, ephemeral=True)
             return
-        key = self.get_next_key()
+        model_config = self.default_gemini_config.model_copy()
+        model_config.system_instruction = system_prompt
         context = await self.get_context_for_prompt(ctx, context_length)
         constructions = "Now answer to the question naturally like a human, don't use phrases like 'according to the context' since human don't talk like that."
         time = self.get_time()
@@ -125,31 +135,39 @@ class Gemini(commands.Cog):
         prompt += f"\n\nCurrent time: {time}"
         prompt += f"\n\nAdditional constructions: {constructions}"
         prompt += f"\n\nAnswer to {ctx.message.author.display_name} ({ctx.message.author.name}):"
-        await self.request_gemini(ctx, prompt, key)
+        await self.request_gemini(ctx, prompt, model_config)
 
     @commands.hybrid_command(name="translate", description="Translate a text.")
     async def translate(
         self,
         ctx: commands.Context,
         *,
-        text: str,
         target_language: str = None,
         context_length: int = None,
     ):
+        if ctx.message.channel.id != self.chat_channel_id:
+            await ctx.send("I apologize, but……", delete_after=5, ephemeral=True)
+            return
+        if ctx.message.reference is None:
+            await ctx.send(
+                "Please reply to the message you want to translate.", ephemeral=True
+            )
+            return
+        message = await ctx.fetch_message(ctx.message.reference.message_id)
         if context_length is None:
             context_length = self.context_length
         if target_language is None:
             target_language = self.target_language
-        key = self.get_next_key()
-        client = genai.Client(api_key=key)
         system_prompt = f"You are a skilled muti-lingual translator, currently doing a translation job in a discord server. You'll get the context and a message which you need to translate into {target_language}. You only need to supply the translation according to the context without any additional information. Don't act like a machine, talk smoothly like a human without being too informal."
+        model_config = self.default_gemini_config.model_copy()
+        model_config.system_instruction = system_prompt
         context = await self.get_context_for_prompt(ctx, self.context_length)
         time = self.get_time()
         prompt = f"Chat context: \n{{{context}}}"
-        prompt += f"\n\nText to translate: {text}"
+        prompt += f"\n\nMessage to translate: \n{{{message.author.display_name} ({message.author.name}): {message.content}}}"
         prompt += f"\n\nCurrent time: {time}"
-        prompt += f"\n\n{target_language} translation:"
-        await self.request_gemini(ctx, prompt, key)
+        prompt += f"\n\n{target_language} translation for {ctx.message.author.display_name} ({ctx.message.author.name}):"
+        await self.request_gemini(ctx, prompt, model_config)
 
     @commands.hybrid_command(name="set_prompt", description="Set the system prompt.")
     @commands.is_owner()
