@@ -2,6 +2,8 @@ from discord.ext import commands
 import discord
 from google import genai
 from google.genai import types
+import pytz
+from datetime import datetime
 from utils.decorator import auto_delete
 
 from utils.func import resolve_config, write_config, cpt
@@ -20,6 +22,7 @@ class Gemini(commands.Cog):
         self.system_prompt = ""
         self.config = config
         self.context_length = 20
+        self.target_language = "Chinese"
         self.default_gemini_config = types.GenerateContentConfig(
             system_instruction=self.system_prompt,
             top_k=55,
@@ -49,6 +52,10 @@ class Gemini(commands.Cog):
             ],
         )
 
+    def get_time(self):
+        tz = pytz.timezone("Asia/Shanghai")
+        return datetime.now(tz).strftime("%Y-%m-%d %H:%M:%S")
+
     def get_next_key(self):
         self.current_key = (self.current_key + 1) % self.num
         self.config["current_key"] = self.current_key
@@ -60,7 +67,9 @@ class Gemini(commands.Cog):
         async for msg in ctx.channel.history(
             limit=context_length + 1, before=ctx.message
         ):
-            context_msg.append(f"{msg.author.name}: {msg.content}")
+            context_msg.append(
+                f"{msg.author.display_name} ({msg.author.name}): {msg.content}"
+            )
         context_msg.reverse()
         return "\n".join(context_msg)
 
@@ -110,10 +119,38 @@ class Gemini(commands.Cog):
         key = self.get_next_key()
         context = await self.get_context_for_prompt(ctx, context_length)
         constructions = "Now answer to the question naturally like a human, don't use phrases like 'according to the context' since human don't talk like that."
-        prompt = f"Chat context: \n{{{context}}} \n\nQuestion from {ctx.message.author.name}: {question} \n\n Additional constructions: {constructions}\n\nAnswer to {ctx.message.author.name}:"
+        time = self.get_time()
+        prompt = f"Chat context: \n{{{context}}}"
+        prompt += f"\n\nQuestion from {ctx.message.author.display_name} ({ctx.message.author.name}): {question}"
+        prompt += f"\n\nCurrent time: {time}"
+        prompt += f"\n\nAdditional constructions: {constructions}"
+        prompt += f"\n\nAnswer to {ctx.message.author.display_name} ({ctx.message.author.name}):"
         await self.request_gemini(ctx, prompt, key)
 
-    # @commands.hybrid_command(name="translate", description="Translate a text.")
+    @commands.hybrid_command(name="translate", description="Translate a text.")
+    async def translate(
+        self,
+        ctx: commands.Context,
+        *,
+        text: str,
+        target_language: str = None,
+        context_length: int = None,
+    ):
+        if context_length is None:
+            context_length = self.context_length
+        if target_language is None:
+            target_language = self.target_language
+        key = self.get_next_key()
+        client = genai.Client(api_key=key)
+        system_prompt = f"You are a skilled muti-lingual translator, currently doing a translation job in a discord server. You'll get the context and a message which you need to translate into {target_language}. You only need to supply the translation according to the context without any additional information. Don't act like a machine, talk smoothly like a human without being too informal."
+        context = await self.get_context_for_prompt(ctx, self.context_length)
+        time = self.get_time()
+        prompt = f"Chat context: \n{{{context}}}"
+        prompt += f"\n\nText to translate: {text}"
+        prompt += f"\n\nCurrent time: {time}"
+        prompt += f"\n\n{target_language} translation:"
+        await self.request_gemini(ctx, prompt, key)
+
     @commands.hybrid_command(name="set_prompt", description="Set the system prompt.")
     @commands.is_owner()
     @auto_delete(delay=0)
@@ -140,6 +177,15 @@ class Gemini(commands.Cog):
     async def set_prompt(self, ctx: commands.Context, context_length: int):
         self.context_length = context_length
         await ctx.send("Context length set.", ephemeral=True, delete_after=5)
+
+    @commands.hybrid_command(
+        name="set_target_language", description="Set the target language."
+    )
+    @commands.is_owner()
+    @auto_delete(delay=0)
+    async def set_target_language(self, ctx: commands.Context, target_language: str):
+        self.target_language = target_language
+        await ctx.send("Target language set.", ephemeral=True, delete_after=5)
 
 
 async def setup(bot: commands.Bot):
