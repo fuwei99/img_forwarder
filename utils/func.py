@@ -8,6 +8,15 @@ def resolve_config() -> dict:
     return config
 
 
+def write_config(config: dict):
+    # there's possibility that the config file has been modified by other process
+    # this will lead to data loss
+    # we'll fix this later since currently only one process will write to the config file
+    with open("config.json", "w", encoding="utf-8") as f:
+        json.dump(config, f, indent=4)
+    return config
+
+
 def get_words() -> dict:
     with open("trigger.json", "r", encoding="utf-8") as f:
         words = json.load(f)
