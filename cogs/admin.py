@@ -13,7 +13,7 @@ class Admin(commands.Cog):
         name="sync", description="Sync hybrid commands.", hidden=True
     )
     @commands.is_owner()
-    @auto_delete()
+    @auto_delete(delay=0)
     async def sync(self, ctx: commands.Context):
         await self.bot.tree.sync()
         await ctx.send("Synced hybrid commands.", ephemeral=True, delete_after=5)
@@ -24,7 +24,7 @@ class Admin(commands.Cog):
         hidden=True,
     )
     @commands.is_owner()
-    @auto_delete()
+    @auto_delete(delay=0)
     async def list(self, ctx: commands.Context):
         cogs = [cog for cog in self.bot.cogs]
         await ctx.send(
@@ -33,21 +33,21 @@ class Admin(commands.Cog):
 
     @commands.hybrid_command(name="load", description="Load a cog.", hidden=True)
     @commands.is_owner()
-    @auto_delete()
+    @auto_delete(delay=0)
     async def load(self, ctx: commands.Context, cog: str):
         await self.bot.load_extension(f"cogs.{mapping_cog(cog)}")
         await ctx.send(f"Loaded cog: {cog}", ephemeral=True, delete_after=5)
 
     @commands.hybrid_command(name="unload", description="Unload a cog.")
     @commands.is_owner()
-    @auto_delete()
+    @auto_delete(delay=0)
     async def unload(self, ctx: commands.Context, cog: str):
         await self.bot.unload_extension(f"cogs.{mapping_cog(cog)}")
         await ctx.send(f"Unloaded cog: {cog}", ephemeral=True, delete_after=5)
 
     @commands.hybrid_command(name="reload", description="Reload a cog.", hidden=True)
     @commands.is_owner()
-    @auto_delete()
+    @auto_delete(delay=0)
     async def reload(self, ctx: commands.Context, cog: str):
         await self.bot.reload_extension(f"cogs.{mapping_cog(cog)}")
         await ctx.send(f"Reloaded cog: {cog}", ephemeral=True, delete_after=5)
@@ -58,7 +58,7 @@ class Admin(commands.Cog):
         hidden=True,
     )
     @commands.is_owner()
-    @auto_delete()
+    @auto_delete(delay=0)
     async def reload_all(self, ctx: commands.Context):
         for cog in self.bot.cogs:
             await self.bot.reload_extension(f"cogs.{mapping_cog(cog)}")
@@ -70,7 +70,7 @@ class Admin(commands.Cog):
         hidden=True,
     )
     @commands.is_owner()
-    @auto_delete()
+    @auto_delete(delay=0)
     async def reload_all(self, ctx: commands.Context):
         for file in os.listdir("cogs"):
             if file.endswith(".py"):
