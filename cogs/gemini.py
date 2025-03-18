@@ -161,6 +161,9 @@ class Gemini(commands.Cog):
         question: str,
         context_length: int = None,
     ):
+        if ctx.channel.id != self.chat_channel_id:
+            ctx.send("I apologize, but……", delete_after=5, ephemeral=True)
+            return
         if context_length is None:
             context_length = self.context_length
         if self.system_prompt == "":
@@ -169,16 +172,21 @@ class Gemini(commands.Cog):
                 nickname = ctx.guild.me.name
             self.system_prompt = f"You are {nickname}, a helpful AI assistant. You are assisting a user in a discord server. The user asks you a question, and you provide a helpful response. The user may ask you anything. You always speak Chinese unless the question specifies otherwise."
         system_prompt = self.system_prompt
-        if ctx.channel.id != self.chat_channel_id:
-            ctx.send("I apologize, but……", delete_after=5, ephemeral=True)
-            return
+        if ctx.message.reference is not None:
+            message = ctx.message.reference.resolved
+            context = await self.get_context_for_prompt(
+                ctx, context_length, before_message=message
+            )
+        else:
+            context = await self.get_context_for_prompt(ctx, context_length)
         model_config = self.default_gemini_config.model_copy()
         model_config.system_instruction = system_prompt
-        context = await self.get_context_for_prompt(ctx, context_length)
         instructions = "Now answer to the question naturally like a human, don't use phrases like 'according to the context' since human don't talk like that."
         time = self.get_time()
         prompt = f"Chat context: \n{{{context}}}"
         prompt += f"\n\nQuestion from {ctx.message.author.display_name} ({ctx.message.author.name}): {question}"
+        if ctx.message.reference is not None:
+            prompt += f"\n\nQuestion related message: \n{{{message.author.display_name} ({message.author.name}): {message.content}}}"
         prompt += f"\n\nCurrent time: {time}"
         prompt += f"\n\nAdditional instructions: {instructions}"
         prompt += f"\n\nAnswer to {ctx.message.author.display_name} ({ctx.message.author.name}):"
