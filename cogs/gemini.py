@@ -184,9 +184,9 @@ class Gemini(commands.Cog):
         instructions = "Now answer to the question naturally like a human, don't use phrases like 'according to the context' since human don't talk like that."
         time = self.get_time()
         prompt = f"Chat context: {{\n{context}\n}}"
-        prompt += f"\n\nQuestion from {ctx.message.author.display_name} ({ctx.message.author.name}): {question}"
         if ctx.message.reference is not None:
             prompt += f"\n\nQuestion directly related to message: {{\n{message.author.display_name} ({message.author.name}): {message.content}\n}}"
+        prompt += f"\n\nQuestion from {ctx.message.author.display_name} ({ctx.message.author.name}): {question}"
         prompt += f"\n\nCurrent time: {time}"
         prompt += f"\n\nAdditional instructions: {instructions}"
         prompt += f"\n\nAnswer to {ctx.message.author.display_name} ({ctx.message.author.name}):"
