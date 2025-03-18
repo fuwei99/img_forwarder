@@ -54,7 +54,7 @@ class Gemini(commands.Cog):
         context_msg.reverse()
         context = "\n".join(context_msg)
         # 获取提问者的名字
-        prompt = f"Chat context: \n{{{context}}} \n\nQuestion from {ctx.message.author.name}: {question} \n\nAnswer:"
+        prompt = f"Chat context: \n{{{context}}} \n\nQuestion from {ctx.message.author.name}: {question} \n\nAnswer to {ctx.message.author.name}:"
         client = genai.Client(api_key=key)
         msg = await ctx.send("Thinking...")
         full = ""
