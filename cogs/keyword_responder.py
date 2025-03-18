@@ -26,6 +26,7 @@ class KeywordResponder(commands.Cog):
             if trigger_message.get(k):
                 trigger_message[w] = trigger_message[k]
         repeat_messages = set(words.get("repeat_messages"))
+        print("trigger words loaded.")
         return trigger_words, trigger_message, repeat_messages
 
     def is_emoji(self, s):
