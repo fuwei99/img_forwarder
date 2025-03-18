@@ -1,2 +1,4 @@
 colorama==0.4.6
 discord.py==2.5.2
+protobuf==6.30.1
+google-generativeai==0.8.4
