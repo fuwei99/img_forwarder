@@ -1,9 +1,11 @@
 import asyncio
 import json
-from cogs.keyword_responder import KeywordResponder
-from cogs.my_commands import MyCommands
 from discord.ext import commands
 import discord
+
+from cogs.keyword_responder import KeywordResponder
+from cogs.my_commands import MyCommands
+from cogs.admin import Admin
 
 
 def resolve_config():
@@ -32,7 +34,7 @@ def resolve_config():
 
 
 def load_words():
-    with open("trigger.json", "r") as f:
+    with open("trigger.json", "r", encoding="utf-8") as f:
         words = json.load(f)
     return words
 
@@ -56,22 +58,6 @@ bot = commands.Bot(command_prefix=".", intents=intents)
 words = load_words()
 
 
-@commands.command(name="reload")
-@commands.is_owner()
-async def reload(ctx: commands.Context):
-    # reload cogs
-    for cog in bot.cogs:
-        bot.remove_cog(cog)
-    await main()
-
-
-@commands.command(name="sync")
-@commands.is_owner()
-async def sync(ctx: commands.Context):
-    await bot.tree.sync()
-    await ctx.send("Synced tree.", ephemeral=True)
-
-
 async def main():
     await bot.add_cog(MyCommands(bot, backup_channel_id))
     await bot.add_cog(
@@ -79,6 +65,7 @@ async def main():
             bot, target_channel_id, source_channel_id, chat_channel_id, words
         )
     )
+    await bot.add_cog(Admin(bot))
     await bot.start(token)
     print("bot started")
 
