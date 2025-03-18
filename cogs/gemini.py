@@ -174,7 +174,7 @@ class Gemini(commands.Cog):
     )
     @commands.is_owner()
     @auto_delete(delay=0)
-    async def set_prompt(self, ctx: commands.Context, context_length: int):
+    async def set_context_length(self, ctx: commands.Context, context_length: int):
         self.context_length = context_length
         await ctx.send("Context length set.", ephemeral=True, delete_after=5)
 
