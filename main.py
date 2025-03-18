@@ -47,7 +47,7 @@ def get_gemini_key(model):
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
-bot = commands.Bot(command_prefix="!", intents=intents)
+bot = commands.Bot(command_prefix=".", intents=intents)
 
 available_models = {
     "pro": "gemini-2.0-pro-exp-02-05",
