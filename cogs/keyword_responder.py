@@ -16,7 +16,7 @@ class KeywordResponder(commands.Cog):
             self.load_words(words)
         )
 
-    def load_words(words):
+    def load_words(self, words):
         trigger_words = words.get("trigger_words")
         for w, k in words.get("trigger_words_rec").items():
             if trigger_words.get(k):
