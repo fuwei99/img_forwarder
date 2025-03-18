@@ -181,7 +181,7 @@ class Gemini(commands.Cog):
             context = await self.get_context_for_prompt(ctx, context_length)
         model_config = self.default_gemini_config.model_copy()
         model_config.system_instruction = system_prompt
-        instructions = "Now answer to the question naturally like a human, don't use phrases like 'according to the context' since human don't talk like that."
+        instructions = "Now answer to the question naturally like a human, don't use phrases like 'according to the context' since human don't talk like that. Remember the Language is Chinese unless the user specifies otherwise!"
         time = self.get_time()
         prompt = f"Chat context: {{\n{context}\n}}"
         if ctx.message.reference is not None:
