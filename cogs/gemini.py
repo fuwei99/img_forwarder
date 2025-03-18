@@ -47,11 +47,14 @@ class Gemini(commands.Cog):
             return
         key = self.get_next_key()
         context_msg = []
-        async for msg in ctx.channel.history(limit=context_length):
+        async for msg in ctx.channel.history(
+            limit=context_length + 1, before=ctx.message
+        ):
             context_msg.append(f"{msg.author.name}: {msg.content}")
         context_msg.reverse()
         context = "\n".join(context_msg)
-        prompt = f"Chat context: \n{{{context}}} \nQuestion: {question}\n Answer:"
+        # 获取提问者的名字
+        prompt = f"Chat context: \n{{{context}}} \n\nQuestion from {ctx.message.author.name}: {question} \n\nAnswer:"
         client = genai.Client(api_key=key)
         msg = await ctx.send("Thinking...")
         full = ""
