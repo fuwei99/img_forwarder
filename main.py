@@ -2,72 +2,23 @@ import asyncio
 import json
 from discord.ext import commands
 import discord
-
-from cogs.keyword_responder import KeywordResponder
-from cogs.my_commands import MyCommands
-from cogs.admin import Admin
-
-
-def resolve_config():
-    with open("config.json", "r") as f:
-        config = json.load(f)
-    token = config.get("token")
-    target_channel_id = config.get("target_channel_id")
-    source_channel_id = config.get("source_channel_id")
-    chat_channel_id = config.get("chat_channel_id")
-    backup_channel_id = config.get("backup_channel_id")
-    gemini_keys = config.get("gemini_keys")
-    num = len(gemini_keys)
-    current_gemini_pro_key = config.get("current_gemini_pro_key")
-    current_gemini_flash_key = config.get("current_gemini_flash_key")
-    return (
-        token,
-        target_channel_id,
-        source_channel_id,
-        chat_channel_id,
-        backup_channel_id,
-        gemini_keys,
-        num,
-        current_gemini_pro_key,
-        current_gemini_flash_key,
-    )
-
-
-def load_words():
-    with open("trigger.json", "r", encoding="utf-8") as f:
-        words = json.load(f)
-    return words
-
+import os
+from utils.func import resolve_config
 
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
 
 bot = commands.Bot(command_prefix=".", intents=intents)
-(
-    token,
-    target_channel_id,
-    source_channel_id,
-    chat_channel_id,
-    backup_channel_id,
-    gemini_keys,
-    num,
-    current_gemini_pro_key,
-    current_gemini_flash_key,
-) = resolve_config()
-words = load_words()
 
 
 async def main():
-    await bot.add_cog(MyCommands(bot, backup_channel_id))
-    await bot.add_cog(
-        KeywordResponder(
-            bot, target_channel_id, source_channel_id, chat_channel_id, words
-        )
-    )
-    await bot.add_cog(Admin(bot))
+    config = resolve_config()
+    token = config.get("token")
+    for file in os.listdir("cogs"):
+        if file.endswith(".py"):
+            bot.load_extension(f"cogs.{file[:-3]}")
     await bot.start(token)
-    print("bot started")
 
 
 asyncio.run(main())
