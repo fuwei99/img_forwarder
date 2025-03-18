@@ -32,7 +32,7 @@ def resolve_config():
 
 
 def load_words():
-    with open("words.json", "r") as f:
+    with open("trigger.json", "r") as f:
         words = json.load(f)
     return words
 
