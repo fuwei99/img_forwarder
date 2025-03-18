@@ -31,6 +31,12 @@ def resolve_config():
     )
 
 
+def load_words():
+    with open("words.json", "r") as f:
+        words = json.load(f)
+    return words
+
+
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
@@ -47,12 +53,27 @@ bot = commands.Bot(command_prefix=".", intents=intents)
     current_gemini_pro_key,
     current_gemini_flash_key,
 ) = resolve_config()
+words = load_words()
+
+
+@commands.command(name="reload")
+@commands.is_owner()
+async def reload(ctx: commands.Context):
+    # reload cogs
+    for cog in bot.cogs:
+        bot.remove_cog(cog)
+    await main()
+
+
+@commands.command(name="sync")
+@commands.is_owner()
+async def sync(ctx: commands.Context):
+    await bot.tree.sync()
+    await ctx.send("Synced tree.", ephemeral=True)
 
 
 async def main():
-    with open("trigger.json", "r", encoding="utf-8") as f:
-        words = json.load(f)
-    await bot.add_cog(MyCommands(bot))
+    await bot.add_cog(MyCommands(bot, backup_channel_id))
     await bot.add_cog(
         KeywordResponder(
             bot, target_channel_id, source_channel_id, chat_channel_id, words
