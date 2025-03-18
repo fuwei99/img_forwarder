@@ -62,15 +62,54 @@ class Gemini(commands.Cog):
         write_config(self.config)
         return self.apikeys[self.current_key]
 
-    async def get_context_for_prompt(self, ctx: commands.Context, context_length: int):
+    async def get_context_for_prompt(
+        self,
+        ctx: commands.Context,
+        context_length: int,
+        before_message=None,
+        after_message=None,
+    ):
         context_msg = []
-        async for msg in ctx.channel.history(
-            limit=context_length + 1, before=ctx.message
-        ):
+        if before_message is not None and after_message is not None:
+            async for msg in ctx.channel.history(
+                limit=context_length + 1, before=before_message
+            ):
+                context_msg.append(
+                    f"{msg.author.display_name} ({msg.author.name}): {msg.content}"
+                )
+            context_msg.reverse()
             context_msg.append(
-                f"{msg.author.display_name} ({msg.author.name}): {msg.content}"
+                f"{after_message.author.display_name} ({after_message.author.name}): {after_message.content}"
             )
-        context_msg.reverse()
+            async for msg in ctx.channel.history(
+                limit=context_length, after=after_message
+            ):
+                context_msg.append(
+                    f"{msg.author.display_name} ({msg.author.name}): {msg.content}"
+                )
+        elif before_message is not None:
+            async for msg in ctx.channel.history(
+                limit=context_length + 1, before=before_message
+            ):
+                context_msg.append(
+                    f"{msg.author.display_name} ({msg.author.name}): {msg.content}"
+                )
+            context_msg.reverse()
+        elif after_message is not None:
+            async for msg in ctx.channel.history(
+                limit=context_length + 1, after=after_message
+            ):
+                context_msg.append(
+                    f"{msg.author.display_name} ({msg.author.name}): {msg.content}"
+                )
+        else:
+            async for msg in ctx.channel.history(
+                limit=context_length + 1, before=ctx.message
+            ):
+                context_msg.append(
+                    f"{msg.author.display_name} ({msg.author.name}): {msg.content}"
+                )
+            context_msg.reverse()
         return "\n".join(context_msg)
 
     async def request_gemini(
@@ -78,6 +117,7 @@ class Gemini(commands.Cog):
         ctx: commands.Context,
         prompt: str,
         model_config: types.GenerateContentConfig = None,
+        model="gemini-2.0-pro-exp-02-05",
     ):
         if model_config is None:
             model_config = self.default_gemini_config
@@ -88,7 +128,7 @@ class Gemini(commands.Cog):
         every_two_chunk = False
         try:
             response = client.models.generate_content_stream(
-                model="gemini-2.0-pro-exp-02-05",
+                model=model,
                 contents=[prompt],
                 config=self.default_gemini_config,
             )
@@ -128,12 +168,12 @@ class Gemini(commands.Cog):
         model_config = self.default_gemini_config.model_copy()
         model_config.system_instruction = system_prompt
         context = await self.get_context_for_prompt(ctx, context_length)
-        constructions = "Now answer to the question naturally like a human, don't use phrases like 'according to the context' since human don't talk like that."
+        instructions = "Now answer to the question naturally like a human, don't use phrases like 'according to the context' since human don't talk like that."
         time = self.get_time()
         prompt = f"Chat context: \n{{{context}}}"
         prompt += f"\n\nQuestion from {ctx.message.author.display_name} ({ctx.message.author.name}): {question}"
         prompt += f"\n\nCurrent time: {time}"
-        prompt += f"\n\nAdditional constructions: {constructions}"
+        prompt += f"\n\nAdditional instructions: {instructions}"
         prompt += f"\n\nAnswer to {ctx.message.author.display_name} ({ctx.message.author.name}):"
         await self.request_gemini(ctx, prompt, model_config)
 
@@ -153,21 +193,25 @@ class Gemini(commands.Cog):
                 "Please reply to the message you want to translate.", ephemeral=True
             )
             return
-        message = await ctx.fetch_message(ctx.message.reference.message_id)
+        message = ctx.message.reference.resolved
         if context_length is None:
             context_length = self.context_length
         if target_language is None:
             target_language = self.target_language
-        system_prompt = f"You are a skilled muti-lingual translator, currently doing a translation job in a discord server. You'll get the context and a message which you need to translate into {target_language}. You only need to supply the translation according to the context without any additional information. Don't act like a machine, talk smoothly like a human without being too informal."
+        system_prompt = f"You are a skilled muti-lingual translator, currently doing a translation job in a discord server. You'll get a message which you need to translate into {target_language} with context. You only need to supply the translation according to the context without any additional information. Don't act like a machine, talk smoothly like a human without being too informal."
         model_config = self.default_gemini_config.model_copy()
         model_config.system_instruction = system_prompt
-        context = await self.get_context_for_prompt(ctx, self.context_length)
+        context = await self.get_context_for_prompt(
+            ctx, 10, before_message=message, after_message=message
+        )
         time = self.get_time()
+        instructions = "Remember, you only need to supply the translation which fits the context in a suitable tone, don't give any additional information!"
         prompt = f"Chat context: \n{{{context}}}"
         prompt += f"\n\nMessage to translate: \n{{{message.author.display_name} ({message.author.name}): {message.content}}}"
         prompt += f"\n\nCurrent time: {time}"
+        prompt += f"\n\nAdditional instructions: {instructions}"
         prompt += f"\n\n{target_language} translation for {ctx.message.author.display_name} ({ctx.message.author.name}):"
-        await self.request_gemini(ctx, prompt, model_config)
+        await self.request_gemini(ctx, prompt, model_config, model="gemini-2.0-flash")
 
     @commands.hybrid_command(name="set_prompt", description="Set the system prompt.")
     @commands.is_owner()
