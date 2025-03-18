@@ -55,46 +55,6 @@ available_models = {
     "flash": "gemini-2.0-flash",
 }
 
-# def generate(prompt, model):
-#     api_key = get_gemini_key(model)
-#     genai.configure(api_key=api_key)
-#     model = genai.get_model(available_models[model])
-#     try:
-#         response = model.generate(prompt)
-#         return response.text, response.prompt_feedback
-#     except Exception as e:
-#         return str(e), None
-
-# @bot.command(name='sync')
-# @commands.has_permissions(administrator=True)
-# async def sync(ctx):
-#     synced = await bot.tree.sync()
-#     await ctx.send(f"Synced {synced} commands")
-
-# @bot.hybrid_command(name="start", description="Start your wonderful journey with Gemini!")
-# @app_commands.describe(
-#     message = "[String], try saying hello to Gemini!",
-#     pro="[Boolean], whether to use Gemini 2.0 Pro",
-#     system="[String], system prompt",
-# )
-# async def start(interaction: discord.Interaction, message, pro: bool=False, system: str=""):
-#     model = "pro" if pro else "flash"
-#     prompt = []
-#     if system:
-#         prompt.append({'role': 'user', 'parts': [system]})
-#         prompt.append({'role': 'model', 'parts': ['OK']})
-#     prompt.append({'role': 'user', 'parts': [message]})
-#     response_text, feedback = generate(prompt, model)
-#     if feedback:
-#         print(feedback)
-#     if response_text:
-#         await interaction.response.send_message(response_text)
-#         prompt.append({'role': 'model', 'parts': [response_text]})
-#         interaction.extras['prompt'] = prompt
-#         interaction.extras['model'] = model
-#     else:
-#         await interaction.response.send_message("Gemini just fell asleep, please try again later.")
-
 
 @client.event
 async def on_ready():
@@ -111,6 +71,12 @@ REPEAT_MESSAGES = set()
 async def sync_commands(ctx):
     synced = await bot.tree.sync()
     await ctx.send(f"Synced {synced} commands")
+
+
+# 加一个测试命令foo bar
+@bot.command(name="foo", description="bar")
+async def foo(ctx):
+    await ctx.send("bar")
 
 
 @bot.hybrid_command(name="reload_word_list", description="Reload the word list.")
