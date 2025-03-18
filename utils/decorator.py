@@ -9,10 +9,8 @@ def auto_delete(delay=5):
         @functools.wraps(func)
         async def wrapper(self, ctx: commands.Context, *args, **kwargs):
             await func(self, ctx, *args, **kwargs)
-            if ctx.interaction:
-                await asyncio.sleep(delay)
-                await ctx.delete()
-            else:
+            print(ctx.interaction)
+            if ctx.interaction is None:
                 await asyncio.sleep(delay)
                 await ctx.message.delete()
 

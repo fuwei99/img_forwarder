@@ -2,7 +2,7 @@ from discord.ext import commands
 import discord
 import unicodedata
 
-from utils.func import resolve_config, get_words
+from utils.func import resolve_config, get_words, cpt
 
 
 class KeywordResponder(commands.Cog):
@@ -27,7 +27,7 @@ class KeywordResponder(commands.Cog):
             if trigger_message.get(k):
                 trigger_message[w] = trigger_message[k]
         repeat_messages = set(words.get("repeat_messages"))
-        print("trigger words loaded.")
+        print(cpt.info("Loaded words."))
         return trigger_words, trigger_message, repeat_messages
 
     def is_emoji(self, s):
@@ -114,4 +114,4 @@ async def setup(
             bot, target_channel_id, source_channel_id, chat_channel_id, words
         )
     )
-    print("KeywordResponder cog loaded.")
+    print(cpt.success("Cog loaded: KeywordResponder"))

@@ -1,7 +1,7 @@
 from discord.ext import commands
 import discord
 
-from utils.func import resolve_config
+from utils.func import resolve_config, cpt
 
 
 class MyCommands(commands.Cog):
@@ -67,7 +67,6 @@ class MyCommands(commands.Cog):
             return
         if embeds or files:
             await backup_channel.send(embeds=embeds, files=files)
-        # 加一个备份符号
         await original_message.add_reaction("📨")
 
 
@@ -75,4 +74,4 @@ async def setup(bot: commands.Bot):
     config = resolve_config()
     backup_channel_id = config.get("backup_channel_id")
     await bot.add_cog(MyCommands(bot, backup_channel_id))
-    print("MyCommands cog loaded.")
+    print(cpt.success("Cog loaded: MyCommands"))

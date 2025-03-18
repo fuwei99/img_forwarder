@@ -2,7 +2,7 @@ from discord.ext import commands
 import discord
 import os
 from utils.decorator import auto_delete
-from utils.func import mapping_cog
+from utils.func import mapping_cog, cpt
 
 
 class Admin(commands.Cog):
@@ -85,9 +85,9 @@ class Admin(commands.Cog):
     @auto_delete(delay=0)
     async def nickname(self, ctx: commands.Context, *, nickname: str):
         await ctx.guild.me.edit(nick=nickname)
-        await ctx.send(f"Hola, I'm now {nickname}, どうぞよろしく")
+        await ctx.send(f"Hola, I'm now {nickname}, どうぞよろしく！")
 
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(Admin(bot))
-    print("Admin cog loaded.")
+    print(cpt.success("Cog loaded: Admin"))

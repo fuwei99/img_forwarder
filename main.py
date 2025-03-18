@@ -17,7 +17,7 @@ async def main():
     token = config.get("token")
     for file in os.listdir("cogs"):
         if file.endswith(".py"):
-            bot.load_extension(f"cogs.{file[:-3]}")
+            await bot.load_extension(f"cogs.{file[:-3]}")
     await bot.start(token)
 
 
