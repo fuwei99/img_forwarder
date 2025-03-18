@@ -66,5 +66,5 @@ async def setup(bot: commands.Bot):
     current_key = config.get("current_key")
     chat_channel_id = config.get("chat_channel_id")
     print(cpt.info(f"{len(apikeys)} keys loaded."))
-    bot.add_cog(Gemini(bot, apikeys, current_key, chat_channel_id))
+    await bot.add_cog(Gemini(bot, apikeys, current_key, chat_channel_id))
     print(cpt.success("Cog loaded: Gemini"))
