@@ -79,6 +79,7 @@ class KeywordResponder(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, message):
+        print(message.content)
         if message.author.bot:
             return
         if message.channel.id == self.chat_channel_id:
