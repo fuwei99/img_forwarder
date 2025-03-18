@@ -115,7 +115,7 @@ class Gemini(commands.Cog):
         prompt = f"Chat context: \n{{{context}}} \n\nQuestion from {ctx.message.author.name}: {question} \n\n Additional constructions: {constructions}\n\nAnswer to {ctx.message.author.name}:"
         await self.request_gemini(ctx, prompt, key)
 
-    @commands.hybrid_command(name="translate", description="Translate a text.")
+    # @commands.hybrid_command(name="translate", description="Translate a text.")
     @commands.hybrid_command(name="set_prompt", description="Set the system prompt.")
     @commands.is_owner()
     @auto_delete(delay=0)
