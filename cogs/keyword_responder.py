@@ -82,7 +82,7 @@ class KeywordResponder(commands.Cog):
         print(message.content)
         if message.author.bot:
             return
-        if message.channel.id == self.chat_channel_id:
+        if message.channel.id != self.chat_channel_id:
             return
         if self.repeat(message):
             await message.channel.send(message.content)
