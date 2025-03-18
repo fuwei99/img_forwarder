@@ -186,7 +186,7 @@ class Gemini(commands.Cog):
         prompt = f"Chat context: \n{{{context}}}"
         prompt += f"\n\nQuestion from {ctx.message.author.display_name} ({ctx.message.author.name}): {question}"
         if ctx.message.reference is not None:
-            prompt += f"\n\nQuestion related message: \n{{{message.author.display_name} ({message.author.name}): {message.content}}}"
+            prompt += f"\n\nQuestion directly related to message: \n{{{message.author.display_name} ({message.author.name}): {message.content}}}"
         prompt += f"\n\nCurrent time: {time}"
         prompt += f"\n\nAdditional instructions: {instructions}"
         prompt += f"\n\nAnswer to {ctx.message.author.display_name} ({ctx.message.author.name}):"
