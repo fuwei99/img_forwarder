@@ -140,7 +140,7 @@ class Gemini(commands.Cog):
                 config=self.default_gemini_config,
             )
 
-            async for chunk in response:
+            for chunk in response:
                 if chunk.text:
                     print(chunk.text)
                     full += chunk.text
