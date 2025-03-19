@@ -2,3 +2,4 @@ colorama==0.4.6
 discord.py==2.5.2
 google-genai==1.5.0
 pytz==2025.1
+aiohttp==3.11.14
