@@ -6,6 +6,7 @@ from google import genai
 from google.genai import types
 import pytz
 import random
+from aiohttp import ClientSession
 from datetime import datetime
 from utils.decorator import auto_delete
 
@@ -61,7 +62,9 @@ class Gemini(commands.Cog):
         self.openai_api_key = config.get("openai_api_key")
         self.openai_endpoint = config.get("openai_endpoint")
         self.webhook_url = config.get("webhook_url")
-        self.webhook = discord.Webhook.from_url(self.webhook_url)
+        self.webhook = discord.Webhook.from_url(
+            self.webhook_url, session=ClientSession()
+        )
 
         if self.openai_api_key is not None and self.openai_endpoint is not None:
             print(cpt.info("OpenAI API available."))
@@ -266,7 +269,7 @@ class Gemini(commands.Cog):
         prompt += f"\n\nCurrent time: {time}"
         prompt += f"\n\nAdditional instructions: {instructions}"
         prompt += f"\n\n{target_language} translation for {ctx.message.author.display_name} ({ctx.message.author.name}):"
-        username = ctx.me.display_name + " (Translator:abc:)"
+        username = ctx.me.display_name + " (Translator🔤)"
         await self.request_gemini(
             ctx, prompt, model_config, model="gemini-2.0-flash", username=username
         )
