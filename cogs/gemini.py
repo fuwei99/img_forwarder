@@ -61,13 +61,13 @@ class Gemini(commands.Cog):
                 ),
             ],
         )
+        self.tz = pytz.timezone("Asia/Shanghai")
         self.non_gemini_model = None  # for openai model
         self.openai_api_key = openai_api_key
         self.openai_endpoint = openai_endpoint
 
     def get_time(self):
-        tz = pytz.timezone("Asia/Shanghai")
-        return datetime.now(tz).strftime("%Y-%m-%d %H:%M:%S")
+        return datetime.now(self.tz).strftime("%Y-%m-%d %H:%M:%S")
 
     def get_next_key(self):
         self.current_key = (self.current_key + 1) % self.num
@@ -91,24 +91,24 @@ class Gemini(commands.Cog):
                 limit=context_length + 1, before=before_message
             ):
                 context_msg.append(
-                    f"{msg.author.display_name} ({msg.author.name}): {msg.content}"
+                    f"{msg.author.display_name} ({msg.author.name}) ({self.get_time(msg.edited_at)}): {msg.content}"
                 )
             context_msg.reverse()
             context_msg.append(
-                f"{after_message.author.display_name} ({after_message.author.name}): {after_message.content}"
+                f"{after_message.author.display_name} ({after_message.author.name}) ({self.get_time(after_message.edited_at)}): {after_message.content}"
             )
             async for msg in ctx.channel.history(
                 limit=context_length, after=after_message
             ):
                 context_msg.append(
-                    f"{msg.author.display_name} ({msg.author.name}): {msg.content}"
+                    f"{msg.author.display_name} ({msg.author.name}) ({self.get_time(msg.edited_at)}): {msg.content}"
                 )
         elif before_message is not None:
             async for msg in ctx.channel.history(
                 limit=context_length + 1, before=before_message
             ):
                 context_msg.append(
-                    f"{msg.author.display_name} ({msg.author.name}): {msg.content}"
+                    f"{msg.author.display_name} ({msg.author.name}) ({self.get_time(msg.edited_at)}): {msg.content}"
                 )
             context_msg.reverse()
         elif after_message is not None:
@@ -116,14 +116,14 @@ class Gemini(commands.Cog):
                 limit=context_length + 1, after=after_message
             ):
                 context_msg.append(
-                    f"{msg.author.display_name} ({msg.author.name}): {msg.content}"
+                    f"{msg.author.display_name} ({msg.author.name}) ({self.get_time(msg.edited_at)}): {msg.content}"
                 )
         else:
             async for msg in ctx.channel.history(
                 limit=context_length + 1, before=ctx.message
             ):
                 context_msg.append(
-                    f"{msg.author.display_name} ({msg.author.name}): {msg.content}"
+                    f"{msg.author.display_name} ({msg.author.name}) ({self.get_time(msg.edited_at)}): {msg.content}"
                 )
             context_msg.reverse()
         return "\n".join(context_msg)
@@ -212,7 +212,7 @@ class Gemini(commands.Cog):
             context = await self.get_context_for_prompt(ctx, context_length)
         model_config = self.default_gemini_config.model_copy()
         model_config.system_instruction = system_prompt
-        instructions = f"You are {ctx.me.display_name} ({ctx.me.name}). Now answer the question naturally like a human, don't use phrases like 'according to the context' since human don't talk like that. Remember the Language is Chinese unless the user specifies otherwise!"
+        instructions = f"You are {ctx.me.display_name} ({ctx.me.name}). Now answer the question naturally like a human who talks, don't use phrases like 'according to the context' since humans never talk like that. Remember the Language is Chinese unless the user specifies otherwise!"
         time = self.get_time()
         prompt = f"Chat context: {{\n{context}\n}}"
         if ctx.message.reference is not None:
