@@ -75,6 +75,13 @@ class Gemini(commands.Cog):
         write_config(self.config)
         return self.apikeys[self.current_key]
 
+    def get_msg_time(self, msg: discord.Message) -> str:
+        return (
+            self.get_time(msg.edited_at)
+            if msg.edited_at is not None
+            else self.get_time(msg.created_at)
+        )
+
     def get_random_key(self):
         return self.apikeys[random.randint(0, self.num - 1)]
 
@@ -91,24 +98,24 @@ class Gemini(commands.Cog):
                 limit=context_length + 1, before=before_message
             ):
                 context_msg.append(
-                    f"{msg.author.display_name} ({msg.author.name}) ({self.get_time(msg.edited_at)}): {msg.content}"
+                    f"{msg.author.display_name} ({msg.author.name}) ({self.get_msg_time(msg)}): {msg.content}"
                 )
             context_msg.reverse()
             context_msg.append(
-                f"{after_message.author.display_name} ({after_message.author.name}) ({self.get_time(after_message.edited_at)}): {after_message.content}"
+                f"{after_message.author.display_name} ({after_message.author.name}) ({self.get_msg_time(after_message)}): {after_message.content}"
             )
             async for msg in ctx.channel.history(
                 limit=context_length, after=after_message
             ):
                 context_msg.append(
-                    f"{msg.author.display_name} ({msg.author.name}) ({self.get_time(msg.edited_at)}): {msg.content}"
+                    f"{msg.author.display_name} ({msg.author.name}) ({self.get_msg_time(msg)}): {msg.content}"
                 )
         elif before_message is not None:
             async for msg in ctx.channel.history(
                 limit=context_length + 1, before=before_message
             ):
                 context_msg.append(
-                    f"{msg.author.display_name} ({msg.author.name}) ({self.get_time(msg.edited_at)}): {msg.content}"
+                    f"{msg.author.display_name} ({msg.author.name}) ({self.get_msg_time(msg)}): {msg.content}"
                 )
             context_msg.reverse()
         elif after_message is not None:
@@ -116,14 +123,14 @@ class Gemini(commands.Cog):
                 limit=context_length + 1, after=after_message
             ):
                 context_msg.append(
-                    f"{msg.author.display_name} ({msg.author.name}) ({self.get_time(msg.edited_at)}): {msg.content}"
+                    f"{msg.author.display_name} ({msg.author.name}) ({self.get_msg_time(msg)}): {msg.content}"
                 )
         else:
             async for msg in ctx.channel.history(
                 limit=context_length + 1, before=ctx.message
             ):
                 context_msg.append(
-                    f"{msg.author.display_name} ({msg.author.name}) ({self.get_time(msg.edited_at)}): {msg.content}"
+                    f"{msg.author.display_name} ({msg.author.name}) ({self.get_msg_time(msg)}): {msg.content}"
                 )
             context_msg.reverse()
         return "\n".join(context_msg)
