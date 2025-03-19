@@ -1,3 +1,5 @@
+import asyncio
+from typing import Iterator
 from discord.ext import commands
 import discord
 from google import genai
@@ -116,6 +118,19 @@ class Gemini(commands.Cog):
             context_msg.reverse()
         return "\n".join(context_msg)
 
+    async def stream_generator(self, response: Iterator[types.GenerateContentResponse]):
+        loop = asyncio.get_event_loop()
+        try:
+            iterator = iter(response)
+            while True:
+                try:
+                    item = await loop.run_in_executor(None, next, iterator)
+                    yield item
+                except StopIteration:
+                    break
+        except Exception as e:
+            print(e)
+
     async def request_gemini(
         self,
         ctx: commands.Context,
@@ -140,7 +155,7 @@ class Gemini(commands.Cog):
                 config=self.default_gemini_config,
             )
 
-            for chunk in response:
+            async for chunk in self.stream_generator(response):
                 if chunk.text:
                     print(chunk.text)
                     full += chunk.text
@@ -162,7 +177,7 @@ class Gemini(commands.Cog):
         context_length: int = None,
     ):
         if ctx.channel.id != self.chat_channel_id:
-            ctx.send("I apologize, but……", delete_after=5, ephemeral=True)
+            await ctx.send("I apologize, but……", delete_after=5, ephemeral=True)
             return
         if context_length is None:
             context_length = self.context_length
