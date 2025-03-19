@@ -120,14 +120,21 @@ class Gemini(commands.Cog):
 
     async def stream_generator(self, response: Iterator[types.GenerateContentResponse]):
         loop = asyncio.get_event_loop()
+
+        def safe_next(iterator):
+            try:
+                return next(iterator), False
+            except StopIteration:
+                return None, True
+
         try:
             iterator = iter(response)
             while True:
-                try:
-                    item = await loop.run_in_executor(None, next, iterator)
-                    yield item
-                except StopIteration:
+                item, done = await loop.run_in_executor(None, safe_next, iterator)
+                if done:
                     break
+                print(item)
+                yield item
         except Exception as e:
             print(e)
 
