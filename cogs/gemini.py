@@ -130,7 +130,7 @@ class Gemini(commands.Cog):
         else:
             key = self.get_next_key()
         client = genai.Client(api_key=key)
-        msg = await ctx.send("Thinking...")
+        msg = await ctx.send("Typing...")
         full = ""
         every_two_chunk = False
         try:
@@ -140,7 +140,7 @@ class Gemini(commands.Cog):
                 config=self.default_gemini_config,
             )
 
-            for chunk in response:
+            async for chunk in response:
                 if chunk.text:
                     print(chunk.text)
                     full += chunk.text
