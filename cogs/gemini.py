@@ -17,18 +17,14 @@ class Gemini(commands.Cog):
         self,
         bot: commands.Bot,
         apikeys,
-        current_key,
-        chat_channel_id,
         config,
-        openai_api_key=None,
-        openai_endpoint=None,
     ):
         self.bot = bot
         self.conversations = {}
-        self.apikeys = apikeys
-        self.current_key = current_key
+        self.apikeys = config.get("gemini_keys")
+        self.current_key = config.get("current_key")
         self.num = len(apikeys)
-        self.chat_channel_id = chat_channel_id
+        self.chat_channel_id = config.get("chat_channel_id")
         self.system_prompt = ""
         self.config = config
         self.context_length = 20
@@ -63,8 +59,13 @@ class Gemini(commands.Cog):
         )
         self.tz = pytz.timezone("Asia/Shanghai")
         self.non_gemini_model = None  # for openai model
-        self.openai_api_key = openai_api_key
-        self.openai_endpoint = openai_endpoint
+        self.openai_api_key = config.get("openai_api_key")
+        self.openai_endpoint = config.get("openai_endpoint")
+        self.webhook_url = config.get("webhook_url")
+        self.webhook = discord.Webhook.from_url(self.webhook_url)
+
+        if self.openai_api_key is not None and self.openai_endpoint is not None:
+            print(cpt.info("OpenAI API available."))
 
     def get_time(self):
         return datetime.now(self.tz).strftime("%Y-%m-%d %H:%M:%S")
@@ -160,6 +161,7 @@ class Gemini(commands.Cog):
         prompt: str,
         model_config: types.GenerateContentConfig = None,
         model="gemini-2.0-pro-exp-02-05",
+        username=None,
     ):
         if model_config is None:
             model_config = self.default_gemini_config
@@ -168,7 +170,10 @@ class Gemini(commands.Cog):
         else:
             key = self.get_next_key()
         client = genai.Client(api_key=key)
-        msg = await ctx.send("Typing...")
+        if username is None:
+            msg = await ctx.send("Typing...")
+        else:
+            msg = await self.webhook.send("Typing...", wait=True, username=username)
         full = ""
         every_two_chunk = False
         try:
@@ -218,7 +223,7 @@ class Gemini(commands.Cog):
             context = await self.get_context_for_prompt(ctx, context_length)
         model_config = self.default_gemini_config.model_copy()
         model_config.system_instruction = system_prompt
-        instructions = f"You are {ctx.me.display_name} ({ctx.me.name}). Now answer the question naturally like a human who talks, don't use phrases like 'according to the context' since humans never talk like that. Remember the Language is Chinese unless the user specifies otherwise!"
+        instructions = f"You are {ctx.me.display_name} ({ctx.me.name}). Now answer the question naturally like a human who talks, don't use phrases like 'according to the context' since humans never talk like that. Remember the Language is Chinese unless the user specifies otherwise! When you need to say someone's name, use their display name (the name shown outside the parentheses)."
         time = self.get_time()
         prompt = f"Chat context: {{\n{context}\n}}"
         if ctx.message.reference is not None:
@@ -262,7 +267,10 @@ class Gemini(commands.Cog):
         prompt += f"\n\nCurrent time: {time}"
         prompt += f"\n\nAdditional instructions: {instructions}"
         prompt += f"\n\n{target_language} translation for {ctx.message.author.display_name} ({ctx.message.author.name}):"
-        await self.request_gemini(ctx, prompt, model_config, model="gemini-2.0-flash")
+        username = ctx.me.display_name + " (Translator:abc:)"
+        await self.request_gemini(
+            ctx, prompt, model_config, model="gemini-2.0-flash", username=username
+        )
 
     @commands.hybrid_command(name="set_prompt", description="Set the system prompt.")
     @commands.is_owner()
@@ -305,23 +313,5 @@ async def setup(bot: commands.Bot):
     config = resolve_config()
     apikeys = config.get("gemini_keys")
     print(cpt.info(f"{len(apikeys)} keys loaded."))
-    current_key = config.get("current_key")
-    chat_channel_id = config.get("chat_channel_id")
-    openai_api_key = config.get("openai_api_key")
-    openai_endpoint = config.get("openai_endpoint")
-    if openai_api_key is not None and openai_endpoint is not None:
-        await bot.add_cog(
-            Gemini(
-                bot,
-                apikeys,
-                current_key,
-                chat_channel_id,
-                config,
-                openai_api_key,
-                openai_endpoint,
-            )
-        )
-        print(cpt.success("Cog loaded: Gemini, with OpenAI model"))
-    else:
-        await bot.add_cog(Gemini(bot, apikeys, current_key, chat_channel_id, config))
-        print(cpt.success("Cog loaded: Gemini"))
+    await bot.add_cog(Gemini(bot, config))
+    print(cpt.success("Cog loaded: Gemini"))
