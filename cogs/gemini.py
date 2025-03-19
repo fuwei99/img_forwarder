@@ -69,6 +69,9 @@ class Gemini(commands.Cog):
     def get_time(self):
         return datetime.now(self.tz).strftime("%Y-%m-%d %H:%M:%S")
 
+    def format_time(self, time: datetime) -> str:
+        return time.astimezone(self.tz).strftime("%Y-%m-%d %H:%M:%S")
+
     def get_next_key(self):
         self.current_key = (self.current_key + 1) % self.num
         self.config["current_key"] = self.current_key
@@ -76,11 +79,8 @@ class Gemini(commands.Cog):
         return self.apikeys[self.current_key]
 
     def get_msg_time(self, msg: discord.Message) -> str:
-        return (
-            self.get_time(msg.edited_at)
-            if msg.edited_at is not None
-            else self.get_time(msg.created_at)
-        )
+        time = msg.created_at if msg.edited_at is None else msg.edited_at
+        return self.format_time(time)
 
     def get_random_key(self):
         return self.apikeys[random.randint(0, self.num - 1)]
@@ -150,7 +150,6 @@ class Gemini(commands.Cog):
                 item, done = await loop.run_in_executor(None, safe_next, iterator)
                 if done:
                     break
-                print(item)
                 yield item
         except Exception as e:
             print(e)
