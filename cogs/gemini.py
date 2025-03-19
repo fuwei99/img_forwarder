@@ -14,7 +14,14 @@ from utils.func import resolve_config, write_config, cpt
 
 class Gemini(commands.Cog):
     def __init__(
-        self, bot: commands.Bot, apikeys, current_key, chat_channel_id, config
+        self,
+        bot: commands.Bot,
+        apikeys,
+        current_key,
+        chat_channel_id,
+        config,
+        openai_api_key=None,
+        openai_endpoint=None,
     ):
         self.bot = bot
         self.conversations = {}
@@ -54,6 +61,9 @@ class Gemini(commands.Cog):
                 ),
             ],
         )
+        self.non_gemini_model = None  # for openai model
+        self.openai_api_key = openai_api_key
+        self.openai_endpoint = openai_endpoint
 
     def get_time(self):
         tz = pytz.timezone("Asia/Shanghai")
@@ -121,7 +131,7 @@ class Gemini(commands.Cog):
     async def stream_generator(self, response: Iterator[types.GenerateContentResponse]):
         loop = asyncio.get_event_loop()
 
-        def safe_next(iterator):
+        def safe_next(iterator: Iterator[types.GenerateContentResponse]):
             try:
                 return next(iterator), False
             except StopIteration:
@@ -164,7 +174,6 @@ class Gemini(commands.Cog):
 
             async for chunk in self.stream_generator(response):
                 if chunk.text:
-                    print(chunk.text)
                     full += chunk.text
                     if every_two_chunk:
                         await msg.edit(content=full)
@@ -218,7 +227,6 @@ class Gemini(commands.Cog):
     async def translate(
         self,
         ctx: commands.Context,
-        *,
         target_language: str = None,
         context_length: int = None,
     ):
@@ -290,8 +298,24 @@ class Gemini(commands.Cog):
 async def setup(bot: commands.Bot):
     config = resolve_config()
     apikeys = config.get("gemini_keys")
+    print(cpt.info(f"{len(apikeys)} keys loaded."))
     current_key = config.get("current_key")
     chat_channel_id = config.get("chat_channel_id")
-    print(cpt.info(f"{len(apikeys)} keys loaded."))
-    await bot.add_cog(Gemini(bot, apikeys, current_key, chat_channel_id, config))
-    print(cpt.success("Cog loaded: Gemini"))
+    openai_api_key = config.get("openai_api_key")
+    openai_endpoint = config.get("openai_endpoint")
+    if openai_api_key is not None and openai_endpoint is not None:
+        await bot.add_cog(
+            Gemini(
+                bot,
+                apikeys,
+                current_key,
+                chat_channel_id,
+                config,
+                openai_api_key,
+                openai_endpoint,
+            )
+        )
+        print(cpt.success("Cog loaded: Gemini, with OpenAI model"))
+    else:
+        await bot.add_cog(Gemini(bot, apikeys, current_key, chat_channel_id, config))
+        print(cpt.success("Cog loaded: Gemini"))
