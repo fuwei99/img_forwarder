@@ -16,14 +16,13 @@ class Gemini(commands.Cog):
     def __init__(
         self,
         bot: commands.Bot,
-        apikeys,
         config,
     ):
         self.bot = bot
         self.conversations = {}
         self.apikeys = config.get("gemini_keys")
         self.current_key = config.get("current_key")
-        self.num = len(apikeys)
+        self.num = len(self.apikeys)
         self.chat_channel_id = config.get("chat_channel_id")
         self.system_prompt = ""
         self.config = config
