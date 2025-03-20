@@ -84,7 +84,8 @@ class ContextPrompter:
         Speak naturally like a human who talks, and don't use phrases like 'according to the context' since humans never talk like that. Remember the Language is Chinese unless the user specifies otherwise! Avoid explicitly mentioning someone's name. If you have to mention someone (try to avoid this case), use their display name (the name that appears outside the parentheses).
         Now is {now(tz=self.tz)}.
         {ctx.author.display_name} ({ctx.author.name}) is asking you a question (refer to `<question>`).
-        Consider the context in `<context>` and reply now.
+        Consider the context in `<context>` and reply now. 
+        Avoid using ellipsis!
         Your reply:
         """
         return prompt
@@ -119,6 +120,7 @@ class ContextPrompter:
         Now is {now(tz=self.tz)}.
         {ctx.author.display_name} ({ctx.author.name}) is asking you a question (refer to `<question>`) about the message above (refer to `<reference>`).
         Consider the context in `<context>` and reply now.
+        Avoid using ellipsis!
         Your reply:
         """
         return prompt
