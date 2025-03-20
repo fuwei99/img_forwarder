@@ -87,6 +87,7 @@ class ContextPrompter:
         Now is {now(tz=self.tz)}.
         {ctx.author.display_name} ({ctx.author.name}) is asking you a question (refer to `<question>`) under the context (refer to `<context>`).
         Refer to instructions in `<instruction>` and reply now.
+        Your reply:
         """
         return prompt
 
@@ -122,6 +123,7 @@ class ContextPrompter:
         Now is {now(tz=self.tz)}.
         {ctx.author.display_name} ({ctx.author.name}) is asking you a question (refer to `<question>`) about the message above (refer to `<reference>`) under the context (refer to `<context>`).
         Refer to instructions in `<instruction>` and reply now.
+        Your reply:
         """
         return prompt
 
@@ -145,7 +147,8 @@ class ContextPrompter:
         {context}
         </context>
         <instruction>
-        You are a skilled muti-lingual translator, currently doing a translation job in a discord server. You'll get a message which you need to translate into {target_language} with context. You only need to supply the translation according to the context without any additional information. Don't act like a machine, talk smoothly like a human without being too informal.
+        You are a skilled muti-lingual translator, currently doing a translation job in a discord server. You'll get a message which you need to translate into {target_language} with context. You only need to supply the translation according to the context without any additional information. Don't act like a machine, translate smoothly like a human without being too informal. 
+        Your translation should not include the author's name and the time.
         </instruction>
         <reference>
         {reference.author.display_name} ({reference.author.name}) ({self.get_msg_time(reference)}): {reference.content}
@@ -153,6 +156,6 @@ class ContextPrompter:
         Now is {now(tz=self.tz)}.
         {ctx.author.display_name} ({ctx.author.name}) is asking you to translate the message in `<reference>` into {target_language} under the context (refer to `<context>`).
         Refer to instructions in `<instruction>` and translate now.
-        Your translation should not include the author's name and the time.
+        Your translation:
         """
         return prompt
