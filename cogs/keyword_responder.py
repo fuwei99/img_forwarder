@@ -4,13 +4,13 @@ import unicodedata
 import random
 from typing import Tuple
 
-from utils.func import resolve_config, get_words
+from utils.func import get_words
 from utils.color_printer import cpr
 from utils.config import config
+
+
 class KeywordResponder(commands.Cog):
-    def __init__(
-        self, bot, words
-    ):
+    def __init__(self, bot, words):
         self.bot = bot
         self.target_channel_id = config.get("target_channel_id")
         self.source_channel_id = config.get("source_channel_id")
@@ -107,14 +107,6 @@ class KeywordResponder(commands.Cog):
 async def setup(
     bot: commands.Bot,
 ):
-    config = resolve_config()
-    target_channel_id = config.get("target_channel_id")
-    source_channel_id = config.get("source_channel_id")
-    chat_channel_id = config.get("chat_channel_id")
     words = get_words()
-    await bot.add_cog(
-        KeywordResponder(
-            bot, target_channel_id, source_channel_id, chat_channel_id, words
-        )
-    )
+    await bot.add_cog(KeywordResponder(bot, words))
     print(cpr.success("Cog loaded: KeywordResponder"))

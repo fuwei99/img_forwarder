@@ -6,6 +6,7 @@ from utils.func import mapping_cog
 from utils.color_printer import cpr
 from utils.config import config
 
+
 class Admin(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
@@ -87,14 +88,16 @@ class Admin(commands.Cog):
     async def nickname(self, ctx: commands.Context, *, nickname: str):
         await ctx.guild.me.edit(nick=nickname)
         await ctx.send(f"Hola, I'm now {nickname}, どうぞよろしく！")
-        
-    @commands.hybrid_command(name="reload_config", description="Reload config.", hidden=True)
+
+    @commands.hybrid_command(
+        name="reload_config", description="Reload config.", hidden=True
+    )
     @commands.is_owner()
     @auto_delete(delay=0)
     async def reload_config(self, ctx: commands.Context):
         config.reload()
         await ctx.send("Reloaded config.", ephemeral=True, delete_after=5)
-        
+
     @commands.hybrid_command(name="status", description="Change status.", hidden=True)
     @commands.is_owner()
     @auto_delete(delay=0)

@@ -9,7 +9,6 @@ import random
 from aiohttp import ClientSession
 from utils.decorator import auto_delete
 
-from utils.func import write_config, now, get_time, tz
 from utils.color_printer import cpr
 from utils.config import config
 from utils.context_prompter import ContextPrompter
@@ -69,8 +68,7 @@ class Gemini(commands.Cog):
 
     def get_next_key(self):
         self.current_key = (self.current_key + 1) % self.num
-        self.config["current_key"] = self.current_key
-        write_config(self.config)
+        config.write("current_key", self.current_key)
         return self.apikeys[self.current_key]
 
     def get_random_key(self):

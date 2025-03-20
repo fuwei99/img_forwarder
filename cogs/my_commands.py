@@ -1,14 +1,14 @@
 from discord.ext import commands
 import discord
 
-from utils.func import resolve_config
+from utils.config import config
 from utils.color_printer import cpr
 
 
 class MyCommands(commands.Cog):
-    def __init__(self, bot, backup_channel_id):
+    def __init__(self, bot):
         self.bot = bot
-        self.backup_channel_id = backup_channel_id
+        self.backup_channel_id = config.get("backup_channel_id")
 
     @commands.hybrid_command(name="ping", description="Check the bot's latency.")
     async def ping(self, ctx: commands.Context):
@@ -72,7 +72,5 @@ class MyCommands(commands.Cog):
 
 
 async def setup(bot: commands.Bot):
-    config = resolve_config()
-    backup_channel_id = config.get("backup_channel_id")
-    await bot.add_cog(MyCommands(bot, backup_channel_id))
+    await bot.add_cog(MyCommands(bot))
     print(cpr.success("Cog loaded: MyCommands"))
