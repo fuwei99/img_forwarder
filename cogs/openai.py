@@ -41,6 +41,7 @@ class Openai(commands.Cog):
             "Typing...", username=username, wait=True
         )
         full = ""
+        every_two_chunk = False
         async with ClientSession() as session:
             async with session.post(url, json=data, headers=headers) as response:
                 async for line in response.content:
@@ -53,7 +54,11 @@ class Openai(commands.Cog):
                             delta = choices[0].get("delta").get("content")
                             if delta:
                                 full += delta
-                                await initial_message.edit(content=full)
+                                if every_two_chunk:
+                                    await initial_message.edit(content=full)
+                                    every_two_chunk = False
+                                else:
+                                    every_two_chunk = True
                             if choices[0].get("finish_reason"):
                                 break
 
