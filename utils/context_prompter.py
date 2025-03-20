@@ -143,21 +143,25 @@ class ContextPrompter:
         )
 
         prompt = f"""
-        <context>
-        {context}
-        </context>
+        Read the `<instruction>` carefully.
         <instruction>
         You are a skilled muti-lingual translator, currently doing a translation job in a discord server. You'll get a message which you need to translate into {target_language} with context. You only need to supply the translation according to the context without any additional information. Don't act like a machine, translate smoothly like a human without being too informal. 
         Your translation should not include the author's name and the time.
         </instruction>
+        `<context>` is the chatting context.
+        <context>
+        {context}
+        </context>
+        `<reference>` is the message you need to translate.
         <reference>
         {reference.content}
         </reference>
+        This message is from `<author>`.
         <author>
         {reference.author.display_name} ({reference.author.name}) ({self.get_msg_time(reference)})
         </author>
         Now is {now(tz=self.tz)}.
-        {ctx.author.display_name} ({ctx.author.name}) is asking you to translate the message in `<reference>` into {target_language} under the context (refer to `<context>`). The message is from `<author>`, so consider the context and try to understand the message before translating.
+        {ctx.author.display_name} ({ctx.author.name}) is asking you to translate the message in <reference> into {target_language} under the context (refer to <context>). The message is from `<author>`, so consider the context and try to understand the message before translating.
         Refer to instructions in `<instruction>` and translate now.
         Your translation:
         """
