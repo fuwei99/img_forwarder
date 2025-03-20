@@ -2,8 +2,9 @@ from discord.ext import commands
 import discord
 import os
 from utils.decorator import auto_delete
-from utils.func import mapping_cog, cpt
-
+from utils.func import mapping_cog
+from utils.color_printer import cpr
+from utils.config import config
 
 class Admin(commands.Cog):
     def __init__(self, bot: commands.Bot):
@@ -86,8 +87,22 @@ class Admin(commands.Cog):
     async def nickname(self, ctx: commands.Context, *, nickname: str):
         await ctx.guild.me.edit(nick=nickname)
         await ctx.send(f"Hola, I'm now {nickname}, どうぞよろしく！")
+        
+    @commands.hybrid_command(name="reload_config", description="Reload config.", hidden=True)
+    @commands.is_owner()
+    @auto_delete(delay=0)
+    async def reload_config(self, ctx: commands.Context):
+        config.reload()
+        await ctx.send("Reloaded config.", ephemeral=True, delete_after=5)
+        
+    @commands.hybrid_command(name="status", description="Change status.", hidden=True)
+    @commands.is_owner()
+    @auto_delete(delay=0)
+    async def status(self, ctx: commands.Context, *, status: str):
+        await self.bot.change_presence(activity=discord.Game(name=status))
+        await ctx.send(f"Changed status to {status}.", ephemeral=True, delete_after=5)
 
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(Admin(bot))
-    print(cpt.success("Cog loaded: Admin"))
+    print(cpr.success("Cog loaded: Admin"))

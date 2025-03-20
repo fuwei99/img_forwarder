@@ -4,17 +4,17 @@ import unicodedata
 import random
 from typing import Tuple
 
-from utils.func import resolve_config, get_words, cpt
-
-
+from utils.func import resolve_config, get_words
+from utils.color_printer import cpr
+from utils.config import config
 class KeywordResponder(commands.Cog):
     def __init__(
-        self, bot, target_channel_id, source_channel_id, chat_channel_id, words
+        self, bot, words
     ):
         self.bot = bot
-        self.target_channel_id = target_channel_id
-        self.source_channel_id = source_channel_id
-        self.chat_channel_id = chat_channel_id
+        self.target_channel_id = config.get("target_channel_id")
+        self.source_channel_id = config.get("source_channel_id")
+        self.chat_channel_id = config.get("chat_channel_id")
         self.trigger_words, self.trigger_message, self.repeat_messages = (
             self.load_words(words)
         )
@@ -29,7 +29,7 @@ class KeywordResponder(commands.Cog):
             if trigger_message.get(k):
                 trigger_message[w] = trigger_message[k]
         repeat_messages = set(words.get("repeat_messages"))
-        print(cpt.info("Loaded words."))
+        print(cpr.info("Loaded words."))
         return trigger_words, trigger_message, repeat_messages
 
     def is_emoji(self, s):
@@ -117,4 +117,4 @@ async def setup(
             bot, target_channel_id, source_channel_id, chat_channel_id, words
         )
     )
-    print(cpt.success("Cog loaded: KeywordResponder"))
+    print(cpr.success("Cog loaded: KeywordResponder"))

@@ -1,7 +1,8 @@
 from discord.ext import commands
 import discord
 
-from utils.func import resolve_config, cpt
+from utils.func import resolve_config
+from utils.color_printer import cpr
 
 
 class MyCommands(commands.Cog):
@@ -74,4 +75,4 @@ async def setup(bot: commands.Bot):
     config = resolve_config()
     backup_channel_id = config.get("backup_channel_id")
     await bot.add_cog(MyCommands(bot, backup_channel_id))
-    print(cpt.success("Cog loaded: MyCommands"))
+    print(cpr.success("Cog loaded: MyCommands"))
