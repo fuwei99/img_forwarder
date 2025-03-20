@@ -45,13 +45,11 @@ class Openai(commands.Cog):
             async with session.post(url, json=data, headers=headers) as response:
                 async for line in response.content:
                     line = line.decode("utf-8").strip()
-                    print(line)
                     if line:
                         line = line.removeprefix("data:").strip()
                         data = json.loads(line)
                         choices = data.get("choices")
                         if choices:
-                            print(choices[0])
                             delta = choices[0].get("delta").get("content")
                             if delta:
                                 full += delta
