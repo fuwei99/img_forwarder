@@ -28,7 +28,7 @@ class Openai(commands.Cog):
             "Authorization": f"Bearer {self.key}",
         }
         data = {
-            "model": self.models[model],
+            "model": self.models[model]["id"],
             "messages": [
                 {"role": "user", "content": prompt},
             ],
@@ -41,7 +41,8 @@ class Openai(commands.Cog):
             "Typing...", username=username, wait=True
         )
         full = ""
-        every_five_chunk = 1
+        every_n_chunk = 1
+        n = self.models[model]["chunk_per_edit"]
         async with ClientSession() as session:
             async with session.post(url, json=data, headers=headers) as response:
                 async for line in response.content:
@@ -54,11 +55,11 @@ class Openai(commands.Cog):
                             delta = choices[0].get("delta").get("content")
                             if delta:
                                 full += delta
-                                if every_five_chunk == 5:
+                                if every_n_chunk == n:
                                     await initial_message.edit(content=full)
-                                    every_five_chunk = 1
+                                    every_n_chunk = 1
                                 else:
-                                    every_five_chunk += 1
+                                    every_n_chunk += 1
                             if choices[0].get("finish_reason"):
                                 break
 
