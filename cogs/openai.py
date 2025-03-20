@@ -62,6 +62,7 @@ class Openai(commands.Cog):
                                     every_n_chunk += 1
                             if choices[0].get("finish_reason"):
                                 break
+        await initial_message.edit(content=full)
 
     @commands.hybrid_command(name="yo", description="Chat with OpenAI models.")
     async def yo(
