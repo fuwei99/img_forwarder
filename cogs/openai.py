@@ -106,6 +106,10 @@ class Openai(commands.Cog):
         username = self.model + "🤖"
         await self.request_openai(self.model, prompt, username)
 
+    @commands.hybrid_command(name="models", description="List available OpenAI models.")
+    async def models(self, ctx: commands.Context):
+        await ctx.send("\n".join(self.models.keys()), ephemeral=True, delete_after=5)
+
     @commands.hybrid_command(
         name="set_model", description="Set the default OpenAI model."
     )
