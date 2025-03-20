@@ -151,10 +151,13 @@ class ContextPrompter:
         Your translation should not include the author's name and the time.
         </instruction>
         <reference>
-        {reference.author.display_name} ({reference.author.name}) ({self.get_msg_time(reference)}): {reference.content}
+        {reference.content}
         </reference>
+        <author>
+        {reference.author.display_name} ({reference.author.name}) ({self.get_msg_time(reference)})
+        </author>
         Now is {now(tz=self.tz)}.
-        {ctx.author.display_name} ({ctx.author.name}) is asking you to translate the message in `<reference>` into {target_language} under the context (refer to `<context>`).
+        {ctx.author.display_name} ({ctx.author.name}) is asking you to translate the message in `<reference>` into {target_language} under the context (refer to `<context>`). The message is from `<author>`, so consider the context and try to understand the message before translating.
         Refer to instructions in `<instruction>` and translate now.
         Your translation:
         """
