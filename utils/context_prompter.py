@@ -86,7 +86,7 @@ class ContextPrompter:
         </question>
         Now is {now(tz=self.tz)}.
         {ctx.author.display_name} ({ctx.author.name}) is asking you a question (refer to `<question>`) under the context (refer to `<context>`).
-        Refer to `<instruction>` and reply now.
+        Refer to instructions in `<instruction>` and reply now.
         """
         return prompt
 
@@ -121,7 +121,7 @@ class ContextPrompter:
         </reference>
         Now is {now(tz=self.tz)}.
         {ctx.author.display_name} ({ctx.author.name}) is asking you a question (refer to `<question>`) about the message above (refer to `<reference>`) under the context (refer to `<context>`).
-        Refer to `<instruction>` and reply now.
+        Refer to instructions in `<instruction>` and reply now.
         """
         return prompt
 
@@ -151,8 +151,8 @@ class ContextPrompter:
         {reference.author.display_name} ({reference.author.name}) ({self.get_msg_time(reference)}): {reference.content}
         </reference>
         Now is {now(tz=self.tz)}.
-        {ctx.author.display_name} ({ctx.author.name}) is asking you to translate the message above (refer to `<reference>`) into {target_language} under the context (refer to `<context>`).
-        Refer to `<instruction>` and reply now.
+        {ctx.author.display_name} ({ctx.author.name}) is asking you to translate the message in `<reference>` into {target_language} under the context (refer to `<context>`).
+        Refer to instructions in `<instruction>` and translate now.
         Your translation should not include the author's name and the time.
         """
         return prompt
