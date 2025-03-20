@@ -208,7 +208,6 @@ class Gemini(commands.Cog):
     @auto_delete(delay=0)
     async def set_timezone(self, ctx: commands.Context, timezone: str):
         try:
-            new_tz = pytz.timezone(timezone)
             self.context_prompter.set_tz(timezone)
             await ctx.send(
                 f"Timezone set to {timezone}.", ephemeral=True, delete_after=5
