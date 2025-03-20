@@ -7,17 +7,19 @@ from google.genai import types
 import pytz
 import random
 from aiohttp import ClientSession
-from datetime import datetime
 from utils.decorator import auto_delete
 
-from utils.func import resolve_config, write_config, cpt
+from utils.func import write_config, now, get_time, tz
+from utils.color_printer import cpr
+from utils.config import config
+from utils.context_prompter import ContextPrompter
 
 
 class Gemini(commands.Cog):
     def __init__(
         self,
         bot: commands.Bot,
-        config,
+        webhook: discord.Webhook,
     ):
         self.bot = bot
         self.conversations = {}
@@ -25,7 +27,6 @@ class Gemini(commands.Cog):
         self.current_key = config.get("current_key")
         self.num = len(self.apikeys)
         self.chat_channel_id = config.get("chat_channel_id")
-        self.system_prompt = ""
         self.config = config
         self.context_length = 20
         self.target_language = "Chinese"
@@ -57,23 +58,14 @@ class Gemini(commands.Cog):
                 ),
             ],
         )
-        self.tz = pytz.timezone("Asia/Shanghai")
+        self.webhook = webhook
+        self.context_prompter = ContextPrompter()
         self.non_gemini_model = None  # for openai model
         self.openai_api_key = config.get("openai_api_key")
         self.openai_endpoint = config.get("openai_endpoint")
-        self.webhook_url = config.get("webhook_url")
-        self.webhook = discord.Webhook.from_url(
-            self.webhook_url, session=ClientSession()
-        )
 
         if self.openai_api_key is not None and self.openai_endpoint is not None:
-            print(cpt.info("OpenAI API available."))
-
-    def get_time(self):
-        return datetime.now(self.tz).strftime("%Y-%m-%d %H:%M:%S")
-
-    def format_time(self, time: datetime) -> str:
-        return time.astimezone(self.tz).strftime("%Y-%m-%d %H:%M:%S")
+            print(cpr.info("OpenAI API available."))
 
     def get_next_key(self):
         self.current_key = (self.current_key + 1) % self.num
@@ -81,62 +73,8 @@ class Gemini(commands.Cog):
         write_config(self.config)
         return self.apikeys[self.current_key]
 
-    def get_msg_time(self, msg: discord.Message) -> str:
-        time = msg.created_at if msg.edited_at is None else msg.edited_at
-        return self.format_time(time)
-
     def get_random_key(self):
         return self.apikeys[random.randint(0, self.num - 1)]
-
-    async def get_context_for_prompt(
-        self,
-        ctx: commands.Context,
-        context_length: int,
-        before_message=None,
-        after_message=None,
-    ):
-        context_msg = []
-        if before_message is not None and after_message is not None:
-            async for msg in ctx.channel.history(
-                limit=context_length + 1, before=before_message
-            ):
-                context_msg.append(
-                    f"{msg.author.display_name} ({msg.author.name}) ({self.get_msg_time(msg)}): {msg.content}"
-                )
-            context_msg.reverse()
-            context_msg.append(
-                f"{after_message.author.display_name} ({after_message.author.name}) ({self.get_msg_time(after_message)}): {after_message.content}"
-            )
-            async for msg in ctx.channel.history(
-                limit=context_length, after=after_message
-            ):
-                context_msg.append(
-                    f"{msg.author.display_name} ({msg.author.name}) ({self.get_msg_time(msg)}): {msg.content}"
-                )
-        elif before_message is not None:
-            async for msg in ctx.channel.history(
-                limit=context_length + 1, before=before_message
-            ):
-                context_msg.append(
-                    f"{msg.author.display_name} ({msg.author.name}) ({self.get_msg_time(msg)}): {msg.content}"
-                )
-            context_msg.reverse()
-        elif after_message is not None:
-            async for msg in ctx.channel.history(
-                limit=context_length + 1, after=after_message
-            ):
-                context_msg.append(
-                    f"{msg.author.display_name} ({msg.author.name}) ({self.get_msg_time(msg)}): {msg.content}"
-                )
-        else:
-            async for msg in ctx.channel.history(
-                limit=context_length + 1, before=ctx.message
-            ):
-                context_msg.append(
-                    f"{msg.author.display_name} ({msg.author.name}) ({self.get_msg_time(msg)}): {msg.content}"
-                )
-            context_msg.reverse()
-        return "\n".join(context_msg)
 
     async def stream_generator(self, response: Iterator[types.GenerateContentResponse]):
         loop = asyncio.get_event_loop()
@@ -210,31 +148,16 @@ class Gemini(commands.Cog):
             return
         if context_length is None:
             context_length = self.context_length
-        if self.system_prompt == "":
-            nickname = ctx.guild.me.nick
-            if nickname is None:
-                nickname = ctx.guild.me.name
-            self.system_prompt = f"You are {nickname}, a helpful AI assistant. You are assisting a user in a discord server. The user asks you a question, and you provide a helpful response. The user may ask you anything. You always speak Chinese unless the question specifies otherwise."
-        system_prompt = self.system_prompt
-        if ctx.message.reference is not None:
-            message = ctx.message.reference.resolved
-            context = await self.get_context_for_prompt(
-                ctx, context_length, before_message=message
+        if ctx.message.reference is None:
+            prompt = await self.context_prompter.chat_prompt(
+                ctx, context_length, question
             )
         else:
-            context = await self.get_context_for_prompt(ctx, context_length)
-        model_config = self.default_gemini_config.model_copy()
-        model_config.system_instruction = system_prompt
-        instructions = f"You are {ctx.me.display_name} ({ctx.me.name}). Now answer the question naturally like a human who talks, don't use phrases like 'according to the context' since humans never talk like that. Remember the Language is Chinese unless the user specifies otherwise! When you need to say someone's name, use their display name (the name shown outside the parentheses)."
-        time = self.get_time()
-        prompt = f"Chat context: {{\n{context}\n}}"
-        if ctx.message.reference is not None:
-            prompt += f"\n\nQuestion directly related to message: {{\n{message.author.display_name} ({message.author.name}): {message.content}\n}}"
-        prompt += f"\n\nQuestion from {ctx.message.author.display_name} ({ctx.message.author.name}): {question}"
-        prompt += f"\n\nCurrent time: {time}"
-        prompt += f"\n\nAdditional instructions: {instructions}"
-        prompt += f"\n\nAnswer to {ctx.message.author.display_name} ({ctx.message.author.name}):"
-        await self.request_gemini(ctx, prompt, model_config)
+            message = ctx.message.reference.resolved
+            prompt = await self.context_prompter.chat_prompt_with_reference(
+                ctx, context_length, 5, question, message
+            )
+        await self.request_gemini(ctx, prompt)
 
     @commands.hybrid_command(name="translate", description="Translate a text.")
     async def translate(
@@ -256,41 +179,13 @@ class Gemini(commands.Cog):
             context_length = self.context_length
         if target_language is None:
             target_language = self.target_language
-        system_prompt = f"You are a skilled muti-lingual translator, currently doing a translation job in a discord server. You'll get a message which you need to translate into {target_language} with context. You only need to supply the translation according to the context without any additional information. Don't act like a machine, talk smoothly like a human without being too informal."
-        model_config = self.default_gemini_config.model_copy()
-        model_config.system_instruction = system_prompt
-        context = await self.get_context_for_prompt(
-            ctx, 10, before_message=message, after_message=message
+        prompt = await self.context_prompter.translate_prompt(
+            ctx, context_length, message, 5, target_language
         )
-        time = self.get_time()
-        instructions = "Remember, you only need to supply the translation which fits the context in a suitable tone, don't give any additional information!"
-        prompt = f"Chat context: {{\n{context}\n}}"
-        prompt += f"\n\nMessage to translate: {{\n{message.author.display_name} ({message.author.name}): {message.content}\n}}"
-        prompt += f"\n\nCurrent time: {time}"
-        prompt += f"\n\nAdditional instructions: {instructions}"
-        prompt += f"\n\n{target_language} translation for {ctx.message.author.display_name} ({ctx.message.author.name}):"
         username = ctx.me.display_name + " (Translator🔤)"
         await self.request_gemini(
-            ctx, prompt, model_config, model="gemini-2.0-flash", username=username
+            ctx, prompt, model="gemini-2.0-flash", username=username
         )
-
-    @commands.hybrid_command(name="set_prompt", description="Set the system prompt.")
-    @commands.is_owner()
-    @auto_delete(delay=0)
-    async def set_prompt(
-        self, ctx: commands.Context, system_prompt="", language="Chinese"
-    ):
-        if system_prompt == "":
-            nickname = ctx.guild.me.nick
-            if nickname is None:
-                nickname = ctx.guild.me.name
-            system_prompt = f"You are {nickname}, a helpful AI assistant. You are assisting a user in a discord server. The user asks you a question, and you provide a helpful response. The user may ask you anything."
-        system_prompt = (
-            system_prompt
-            + f"You always speak {language} unless the question specifies otherwise."
-        )
-        self.system_prompt = system_prompt
-        await ctx.send("System prompt set.", ephemeral=True, delete_after=5)
 
     @commands.hybrid_command(
         name="set_context_length", description="Set the context length."
@@ -310,10 +205,25 @@ class Gemini(commands.Cog):
         self.target_language = target_language
         await ctx.send("Target language set.", ephemeral=True, delete_after=5)
 
+    @commands.hybrid_command(name="set_timezone", description="Set the timezone.")
+    @commands.is_owner()
+    @auto_delete(delay=0)
+    async def set_timezone(self, ctx: commands.Context, timezone: str):
+        try:
+            new_tz = pytz.timezone(timezone)
+            self.context_prompter.set_tz(timezone)
+            await ctx.send(
+                f"Timezone set to {timezone}.", ephemeral=True, delete_after=5
+            )
+        except Exception as e:
+            await ctx.send(f"Invalid timezone.", ephemeral=True, delete_after=5)
+
 
 async def setup(bot: commands.Bot):
-    config = resolve_config()
     apikeys = config.get("gemini_keys")
-    print(cpt.info(f"{len(apikeys)} keys loaded."))
-    await bot.add_cog(Gemini(bot, config))
-    print(cpt.success("Cog loaded: Gemini"))
+    print(cpr.info(f"{len(apikeys)} keys loaded."))
+    webhook = discord.Webhook.from_url(
+        config.get("webhook_url"), session=ClientSession()
+    )
+    await bot.add_cog(Gemini(bot, webhook))
+    print(cpr.success("Cog loaded: Gemini"))
