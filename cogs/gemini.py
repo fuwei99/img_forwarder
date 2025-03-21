@@ -10,6 +10,7 @@ from utils.func import async_iter, async_do_thread
 from utils.color_printer import cpr
 from utils.config import config
 from utils.context_prompter import ContextPrompter
+from utils.logger import logger
 
 
 class Gemini(commands.Cog):
@@ -125,7 +126,12 @@ class Gemini(commands.Cog):
                         every_three_chunk += 1
             await msg.edit(content=full)
         except Exception as e:
-            print(e)
+            logger.error(
+                "Error when requesting gemini with key: %s, error: %s",
+                key,
+                e,
+                exc_info=True,
+            )
             if full == "":
                 await msg.edit(content="Uh oh, something went wrong...")
             else:
