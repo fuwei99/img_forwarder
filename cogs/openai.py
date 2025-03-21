@@ -83,38 +83,23 @@ class Openai(commands.Cog):
             return
         if context_length is None:
             context_length = self.context_length
+        username = model + "🤖"
         if ctx.message.reference is None:
             prompt = await self.context_prompter.chat_prompt(
-                ctx, context_length, question
+                ctx, context_length, question, name=username
             )
         else:
             message = ctx.message.reference.resolved
             prompt = await self.context_prompter.chat_prompt_with_reference(
-                ctx, context_length, 5, question, message
+                ctx, context_length, 5, question, message, name=username
             )
-        username = model + "🤖"
         await self.request_openai(model, prompt, username)
 
     @commands.hybrid_command(name="yoo", description="Chat with default OpenAI model.")
     async def yoo(
         self, ctx: commands.Context, *, question: str, context_length: int = None
     ):
-        if ctx.channel.id != self.chat_channel_id:
-            await ctx.send("I apologize, but……", delete_after=5, ephemeral=True)
-            return
-        if context_length is None:
-            context_length = self.context_length
-        if ctx.message.reference is None:
-            prompt = await self.context_prompter.chat_prompt(
-                ctx, context_length, question
-            )
-        else:
-            message = ctx.message.reference.resolved
-            prompt = await self.context_prompter.chat_prompt_with_reference(
-                ctx, context_length, 5, question, message
-            )
-        username = self.model + "🤖"
-        await self.request_openai(self.model, prompt, username)
+        await self.yo(ctx, self.model, question=question, context_length=context_length)
 
     @commands.hybrid_command(name="models", description="List available OpenAI models.")
     @auto_delete(delay=0)
