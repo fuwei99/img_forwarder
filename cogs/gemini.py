@@ -31,7 +31,7 @@ class Gemini(commands.Cog):
             system_instruction="",
             top_k=55,
             top_p=0.95,
-            temperature=1,
+            temperature=1.3,
             safety_settings=[
                 types.SafetySetting(
                     category=types.HarmCategory.HARM_CATEGORY_CIVIC_INTEGRITY,
