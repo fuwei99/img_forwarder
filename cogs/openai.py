@@ -7,6 +7,7 @@ from utils.color_printer import cpr
 from utils.config import config
 from utils.decorator import auto_delete
 from utils.context_prompter import ContextPrompter
+from utils.logger import logger
 
 
 class Openai(commands.Cog):
@@ -63,6 +64,12 @@ class Openai(commands.Cog):
                                     break
             await msg.edit(content=full)
         except Exception as e:
+            logger.error(
+                "Error when requesting openai model: %s, error: %s",
+                model,
+                e,
+                exc_info=True,
+            )
             if full == "":
                 await msg.edit(content="Uh oh, something went wrong...")
             else:
