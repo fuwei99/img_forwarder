@@ -37,32 +37,37 @@ class Openai(commands.Cog):
             "temperature": 1.0,
             "stream": True,
         }
-        initial_message = await self.webhook.send(
-            "Typing...", username=username, wait=True
-        )
+        msg = await self.webhook.send("Typing...", username=username, wait=True)
         full = ""
         every_n_chunk = 1
         n = self.models[model]["chunk_per_edit"]
-        async with ClientSession() as session:
-            async with session.post(url, json=data, headers=headers) as response:
-                async for line in response.content:
-                    line = line.decode("utf-8").strip()
-                    if line:
-                        line = line.removeprefix("data:").strip()
-                        data = json.loads(line)
-                        choices = data.get("choices")
-                        if choices:
-                            delta = choices[0].get("delta").get("content")
-                            if delta:
-                                full += delta
-                                if every_n_chunk == n:
-                                    await initial_message.edit(content=full)
-                                    every_n_chunk = 1
-                                else:
-                                    every_n_chunk += 1
-                            if choices[0].get("finish_reason"):
-                                break
-        await initial_message.edit(content=full)
+        try:
+            async with ClientSession() as session:
+                async with session.post(url, json=data, headers=headers) as response:
+                    async for line in response.content:
+                        line = line.decode("utf-8").strip()
+                        if line:
+                            line = line.removeprefix("data:").strip()
+                            data = json.loads(line)
+                            choices = data.get("choices")
+                            if choices:
+                                delta = choices[0].get("delta").get("content")
+                                if delta:
+                                    full += delta
+                                    if every_n_chunk == n:
+                                        await msg.edit(content=full)
+                                        every_n_chunk = 1
+                                    else:
+                                        every_n_chunk += 1
+                                if choices[0].get("finish_reason"):
+                                    break
+            await msg.edit(content=full)
+        except Exception as e:
+            if full == "":
+                await msg.edit(content="Uh oh, something went wrong...")
+            else:
+                full += "\nUh oh, something went wrong..."
+                await msg.edit(content=full)
 
     @commands.hybrid_command(name="yo", description="Chat with OpenAI models.")
     async def yo(
