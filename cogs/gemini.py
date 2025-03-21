@@ -1,14 +1,12 @@
-import asyncio
-from typing import Iterator
+from io import BytesIO
 from discord.ext import commands
 import discord
 from google import genai
 from google.genai import types
-import pytz
 import random
 from aiohttp import ClientSession
 from utils.decorator import auto_delete
-
+from utils.func import async_iter, async_do_thread
 from utils.color_printer import cpr
 from utils.config import config
 from utils.context_prompter import ContextPrompter
@@ -74,25 +72,6 @@ class Gemini(commands.Cog):
     def get_random_key(self):
         return self.apikeys[random.randint(0, self.num - 1)]
 
-    async def stream_generator(self, response: Iterator[types.GenerateContentResponse]):
-        loop = asyncio.get_event_loop()
-
-        def safe_next(iterator: Iterator[types.GenerateContentResponse]):
-            try:
-                return next(iterator), False
-            except StopIteration:
-                return None, True
-
-        try:
-            iterator = iter(response)
-            while True:
-                item, done = await loop.run_in_executor(None, safe_next, iterator)
-                if done:
-                    break
-                yield item
-        except Exception as e:
-            print(e)
-
     async def request_gemini(
         self,
         ctx: commands.Context,
@@ -100,7 +79,7 @@ class Gemini(commands.Cog):
         model_config: types.GenerateContentConfig = None,
         model="gemini-2.0-pro-exp-02-05",
         username=None,
-        extra_url=None,
+        extra_attachment: discord.Attachment = None,
     ):
         if model_config is None:
             model_config = self.default_gemini_config
@@ -109,16 +88,26 @@ class Gemini(commands.Cog):
         else:
             key = self.get_next_key()
         client = genai.Client(api_key=key)
-        if username is None:
+        contents = [prompt]
+        if extra_attachment:
+            msg = await ctx.send("Downloading the attachment...")
+            bytes_data = await extra_attachment.read()
+            data = BytesIO(bytes_data)
+            await msg.edit(content="Uploading the attachment...")
+            file_config = types.UploadFileConfig(
+                mime_type=extra_attachment.content_type.split(";")[0]
+            )
+            file = await async_do_thread(
+                client.files.upload, file=data, config=file_config
+            )
+            await msg.edit(content="Typing...")
+            contents.append(file)
+        elif username is None:
             msg = await ctx.send("Typing...")
         else:
             msg = await self.webhook.send("Typing...", wait=True, username=username)
         full = ""
         every_three_chunk = 1
-        contents: list[types.Part] = [types.Part.from_text(prompt)]
-        if extra_url:
-            for url in extra_url:
-                contents.append(types.Part.from_url(url))
         try:
             response = client.models.generate_content_stream(
                 model=model,
@@ -126,7 +115,7 @@ class Gemini(commands.Cog):
                 config=self.default_gemini_config,
             )
 
-            async for chunk in self.stream_generator(response):
+            async for chunk in async_iter(response):
                 if chunk.text:
                     full += chunk.text
                     if every_three_chunk == 3:
@@ -137,6 +126,11 @@ class Gemini(commands.Cog):
             await msg.edit(content=full)
         except Exception as e:
             print(e)
+            if full == "":
+                await msg.edit(content="Uh oh, something went wrong...")
+            else:
+                full += "\nUh oh, something went wrong..."
+                await msg.edit(content=full)
 
     @commands.hybrid_command(name="hey", description="Ask a question to gemini.")
     async def hey(
@@ -151,7 +145,7 @@ class Gemini(commands.Cog):
             return
         if context_length is None:
             context_length = self.context_length
-        extra_url = None
+        extra_attachment = None
         if ctx.message.reference is None:
             prompt = await self.context_prompter.chat_prompt(
                 ctx, context_length, question
@@ -159,9 +153,7 @@ class Gemini(commands.Cog):
         else:
             reference = ctx.message.reference.resolved
             if reference.attachments:
-                extra_url: list[str] = []
-                for attachment in reference.attachments:
-                    extra_url.append(attachment.url)
+                extra_attachment = reference.attachments[-1]
                 prompt = await self.context_prompter.chat_prompt_with_attachment(
                     ctx, question, reference
                 )
@@ -169,7 +161,11 @@ class Gemini(commands.Cog):
                 prompt = await self.context_prompter.chat_prompt_with_reference(
                     ctx, context_length, 5, question, reference
                 )
-        await self.request_gemini(ctx, prompt, extra_url=extra_url)
+        await self.request_gemini(
+            ctx,
+            prompt,
+            extra_attachment=extra_attachment,
+        )
 
     @commands.hybrid_command(name="translate", description="Translate a text.")
     async def translate(
