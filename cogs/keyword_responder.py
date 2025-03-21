@@ -106,7 +106,6 @@ class KeywordResponder(commands.Cog):
     async def on_message(self, message):
         if message.author.bot:
             return
-        await self.try_random_delete(message)
         await self.try_forward_images(message)
         await self.try_auto_reply(message)
 
