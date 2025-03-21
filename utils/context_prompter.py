@@ -125,6 +125,32 @@ class ContextPrompter:
         """
         return prompt
 
+    async def chat_prompt_with_attachment(
+        self,
+        ctx: commands.Context,
+        question: str,
+        reference: discord.Message,
+    ):
+        content = reference.content
+        if content == "":
+            content = "[No content, only attachments]"
+        prompt: str = f"""
+        <question>
+        {question}
+        </question>
+        <reference>
+        {reference.author.display_name} ({reference.author.name}) ({self.get_msg_time(reference)}): {reference.content}
+        </reference>
+        You are {ctx.me.display_name} ({ctx.me.name}), chatting in a discord server.
+        Speak naturally like a human who talks, and don't use phrases like 'according to the context' since humans never talk like that. Remember the Language is Chinese unless the user specifies otherwise! Avoid explicitly mentioning someone's name. If you have to mention someone (try to avoid this case), use their display name (the name that appears outside the parentheses).
+        Now is {now(tz=self.tz)}.
+        {ctx.author.display_name} ({ctx.author.name}) is asking you a question (refer to `<question>`) about the message with attachments (refer to `<reference>`).
+        Analyze the attachments and the message content and reply now.
+        Avoid using ellipsis!
+        Your reply:
+        """
+        return prompt
+
     async def translate_prompt(
         self,
         ctx: commands.Context,
