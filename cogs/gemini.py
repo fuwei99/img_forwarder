@@ -100,6 +100,7 @@ class Gemini(commands.Cog):
         model_config: types.GenerateContentConfig = None,
         model="gemini-2.0-pro-exp-02-05",
         username=None,
+        extra_url=None,
     ):
         if model_config is None:
             model_config = self.default_gemini_config
@@ -113,22 +114,26 @@ class Gemini(commands.Cog):
         else:
             msg = await self.webhook.send("Typing...", wait=True, username=username)
         full = ""
-        every_two_chunk = False
+        every_three_chunk = 1
+        contents: list[types.Part] = [types.Part.from_text(prompt)]
+        if extra_url:
+            for url in extra_url:
+                contents.append(types.Part.from_url(url))
         try:
             response = client.models.generate_content_stream(
                 model=model,
-                contents=[prompt],
+                contents=contents,
                 config=self.default_gemini_config,
             )
 
             async for chunk in self.stream_generator(response):
                 if chunk.text:
                     full += chunk.text
-                    if every_two_chunk:
+                    if every_three_chunk == 3:
                         await msg.edit(content=full)
-                        every_two_chunk = False
+                        every_three_chunk = 1
                     else:
-                        every_two_chunk = True
+                        every_three_chunk += 1
             await msg.edit(content=full)
         except Exception as e:
             print(e)
@@ -146,16 +151,25 @@ class Gemini(commands.Cog):
             return
         if context_length is None:
             context_length = self.context_length
+        extra_url = None
         if ctx.message.reference is None:
             prompt = await self.context_prompter.chat_prompt(
                 ctx, context_length, question
             )
         else:
-            message = ctx.message.reference.resolved
-            prompt = await self.context_prompter.chat_prompt_with_reference(
-                ctx, context_length, 5, question, message
-            )
-        await self.request_gemini(ctx, prompt)
+            reference = ctx.message.reference.resolved
+            if reference.attachments:
+                extra_url: list[str] = []
+                for attachment in reference.attachments:
+                    extra_url.append(attachment.url)
+                prompt = await self.context_prompter.chat_prompt_with_attachment(
+                    ctx, question, reference
+                )
+            else:
+                prompt = await self.context_prompter.chat_prompt_with_reference(
+                    ctx, context_length, 5, question, reference
+                )
+        await self.request_gemini(ctx, prompt, extra_url=extra_url)
 
     @commands.hybrid_command(name="translate", description="Translate a text.")
     async def translate(
