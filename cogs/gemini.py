@@ -108,7 +108,8 @@ class Gemini(commands.Cog):
         else:
             msg = await self.webhook.send("Typing...", wait=True, username=username)
         full = ""
-        every_three_chunk = 1
+        n = config.get("gemini_chunk_per_edit")
+        every_n_chunk = 1
         try:
             response = client.models.generate_content_stream(
                 model=model,
@@ -119,11 +120,11 @@ class Gemini(commands.Cog):
             async for chunk in async_iter(response):
                 if chunk.text:
                     full += chunk.text
-                    if every_three_chunk == 3:
+                    if every_n_chunk == n:
                         await msg.edit(content=full)
-                        every_three_chunk = 1
+                        every_n_chunk = 1
                     else:
-                        every_three_chunk += 1
+                        every_n_chunk += 1
             await msg.edit(content=full)
         except Exception as e:
             logger.error(
