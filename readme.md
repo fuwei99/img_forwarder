@@ -20,7 +20,7 @@ This Discord bot was initially created for forwarding images from one channel to
 ```bash
 pip install -r requirements.txt
 ```
-3. Configure config.json with your Discord token and API keys
+3. Configure `config.json` with your Discord token and API keys
 4. Run the bot:
 ```bash
 python main.py
