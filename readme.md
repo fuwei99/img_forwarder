@@ -74,6 +74,7 @@ One possible `config.json`
     ],
     "gemini_chunk_per_edit": 2, // 2 is recommended, 3 is ok
     "current_key": -1, // set to any number will work, it's used for status recording
+    "target_language": "Chinese", // the default target language for ai translation
     "webhook_url": "YOUR_WEB_HOOK_URL", // set up a webhook for the chat channel and this's used for the ai functions
     "openai_key": "OPENAI_KEY",
     "openai_endpoint": "OPENAI_ENDPOINT", // your openai endpoint, and it should end with `/v1`. thus, this allows you to use any other models with an openai format
