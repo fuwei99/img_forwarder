@@ -27,7 +27,7 @@ class Gemini(commands.Cog):
         self.chat_channel_id = config.get("chat_channel_id")
         self.config = config
         self.context_length = 20
-        self.target_language = "Chinese"
+        self.target_language = config.get("target_language")
         self.default_gemini_config = types.GenerateContentConfig(
             system_instruction="",
             top_k=55,
