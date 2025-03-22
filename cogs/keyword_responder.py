@@ -96,12 +96,6 @@ class KeywordResponder(commands.Cog):
                 await target_channel.send(embed=embed)
             await message.add_reaction("✅")
 
-    async def try_random_delete(self, message: discord.Message):
-        author_id = str(message.author.id)
-        if author_id in config.get("message_random_delete_members").keys():
-            if random.random() < config.get("message_random_delete_members")[author_id]:
-                await message.delete
-
     @commands.Cog.listener()
     async def on_message(self, message):
         if message.author.bot:
