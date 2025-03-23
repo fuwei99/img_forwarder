@@ -1,5 +1,6 @@
 import discord
 import pytz
+import re
 from discord.ext import commands
 from utils.func import get_time, now
 
@@ -17,6 +18,29 @@ class ContextPrompter:
             self.tz = pytz.timezone(tz)
         except Exception as e:
             print(e)
+
+    def maltose_regex(self, context: str) -> str:
+        """
+        使用正则表达式预处理上下文内容，删除命令触发词
+        例如: .hey, .yo claude, .yoo 等，这些只是触发词对机器人理解没有用处
+        
+        Args:
+            context: 需要处理的上下文内容
+            
+        Returns:
+            处理后的上下文内容
+        """
+        # 匹配并删除命令触发词
+        # 1. 匹配 .hey, .yo, .yoo 后跟空格和可能的参数
+        pattern1 = r'\.hey\s+|\.yo\s+[a-zA-Z]+\s+|\.yoo\s+'
+        # 2. 匹配独立的命令 .hey, .yo, .yoo (行首或前面有空格，后面是行尾或空格)
+        pattern2 = r'(^|\s)\.hey($|\s)|(^|\s)\.yo($|\s)|(^|\s)\.yoo($|\s)'
+        
+        # 应用正则替换
+        context = re.sub(pattern1, '', context)
+        context = re.sub(pattern2, '', context)
+        
+        return context.strip()
 
     def get_msg_time(self, msg: discord.Message) -> str:
         time = msg.created_at if msg.edited_at is None else msg.edited_at
@@ -89,6 +113,8 @@ class ContextPrompter:
         name: str = None,
     ):
         context = await self.get_context_for_prompt(ctx, context_length)
+        # 应用正则预处理
+        context = self.maltose_regex(context)
         name = name if name else ctx.me.display_name
         
         # 获取预设模板
@@ -138,6 +164,8 @@ class ContextPrompter:
         context = await self.get_context_for_prompt(
             ctx, context_length, reference, after_message_context_length=after_message_context_length
         )
+        # 应用正则预处理
+        context = self.maltose_regex(context)
         name = name if name else ctx.me.display_name
         
         # 获取预设模板
@@ -238,6 +266,8 @@ class ContextPrompter:
         context = await self.get_context_for_prompt(
             ctx, context_length, reference, after_message_context_length=after_message_context_length
         )
+        # 应用正则预处理
+        context = self.maltose_regex(context)
         
         # 使用模板
         template = self._get_template("translate_prompt.txt", ctx.channel.id)
