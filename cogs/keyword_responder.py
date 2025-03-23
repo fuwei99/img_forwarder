@@ -14,7 +14,14 @@ class KeywordResponder(commands.Cog):
         self.bot = bot
         self.target_channel_id = config.get("target_channel_id")
         self.source_channel_id = config.get("source_channel_id")
-        self.chat_channel_id = config.get("chat_channel_id")
+        
+        # 获取chat_channels配置，这是一个字典而不是单个ID
+        self.chat_channels = config.get("chat_channels", {})
+        # 如果仍然存在老版本的chat_channel_id配置，也添加到字典中
+        chat_channel_id = config.get("chat_channel_id")
+        if chat_channel_id:
+            self.chat_channels[str(chat_channel_id)] = {"preset": "default"}
+        
         self.trigger_words, self.trigger_message, self.repeat_messages = (
             self.load_words(words)
         )
@@ -55,11 +62,14 @@ class KeywordResponder(commands.Cog):
         return None
 
     async def try_auto_reply(self, message):
-        if message.channel.id != self.chat_channel_id:
+        # 检查消息是否来自于任何一个聊天频道
+        channel_id = str(message.channel.id)
+        if channel_id not in self.chat_channels:
             return
+            
         if self.in_trigger_message(message):
             await message.channel.send(
-                random.choice(self.trigger_message(message.content))
+                random.choice(self.trigger_message[message.content])
             )
             return
         w = self.in_trigger_word(message)
