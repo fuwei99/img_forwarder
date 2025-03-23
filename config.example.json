@@ -1,0 +1,40 @@
+{
+    "token": "YOUR_DISCORD_BOT_TOKEN",
+    "target_channel_id": 123456789012345678,
+    "source_channel_id": 123456789012345678,
+    "backup_channel_id": 123456789012345678,
+    "main_channel_id": 123456789012345678,
+    "chat_channels": {
+        "123456789012345678": {
+            "preset": "default"
+        },
+        "123456789012345679": {
+            "preset": "default"
+        }
+    },
+    "gemini_keys": [
+        "YOUR_GEMINI_API_KEY_1",
+        "YOUR_GEMINI_API_KEY_2",
+        "YOUR_GEMINI_API_KEY_3"
+    ],
+    "gemini_chunk_per_edit": 2,
+    "current_key": -1,
+    "target_language": "Chinese",
+    "webhook_url": "https://discord.com/api/webhooks/YOUR_WEBHOOK_ID/YOUR_WEBHOOK_TOKEN",
+    "openai_key": "YOUR_OPENAI_API_KEY",
+    "openai_endpoint": "https://api.openai.com/v1",
+    "openai_models": {
+        "gpt": {
+            "id": "gpt-4o",
+            "chunk_per_edit": 10
+        },
+        "grok": {
+            "id": "grok/grok-3",
+            "chunk_per_edit": 10
+        },
+        "claude": {
+            "id": "cursor/claude-3.7-sonnet",
+            "chunk_per_edit": 10
+        }
+    }
+} 
