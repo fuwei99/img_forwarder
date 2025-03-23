@@ -177,16 +177,18 @@
                                         <label for="openai_endpoint">OpenAI API 端点</label>
                                     </div>
                                 </div>
-                                <div class="col-md-6">
-                                    <div class="form-floating mb-3">
-                                        <input type="text" class="form-control" id="openai_model_id" name="openai_model_id">
-                                        <label for="openai_model_id">OpenAI 模型 ID</label>
-                                    </div>
+                            </div>
+                            
+                            <div class="card mb-3">
+                                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                                    <h5 class="mb-0">AI 模型配置</h5>
+                                    <button type="button" class="btn btn-sm btn-primary" id="addModelBtn">
+                                        <i class="bi bi-plus"></i> 添加模型
+                                    </button>
                                 </div>
-                                <div class="col-md-6">
-                                    <div class="form-floating mb-3">
-                                        <input type="number" class="form-control" id="openai_chunk_per_edit" name="openai_chunk_per_edit" min="1">
-                                        <label for="openai_chunk_per_edit">每次编辑的块数</label>
+                                <div class="card-body">
+                                    <div id="ai_models_container" class="mb-3">
+                                        <!-- 这里会动态添加模型设置 -->
                                     </div>
                                 </div>
                             </div>
@@ -228,6 +230,36 @@
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
                         <button type="button" class="btn btn-primary" id="confirmAddChannelBtn">添加</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 添加模型模态框 -->
+        <div class="modal fade" id="addModelModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">添加 AI 模型</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="new_model_name" class="form-label">模型名称</label>
+                            <input type="text" class="form-control" id="new_model_name" placeholder="例如: gpt, claude, grok">
+                        </div>
+                        <div class="mb-3">
+                            <label for="new_model_id" class="form-label">模型 ID</label>
+                            <input type="text" class="form-control" id="new_model_id" placeholder="例如: gpt-4o, cursor/claude-3.7-sonnet">
+                        </div>
+                        <div class="mb-3">
+                            <label for="new_model_chunk_per_edit" class="form-label">每次编辑的块数</label>
+                            <input type="number" class="form-control" id="new_model_chunk_per_edit" value="10" min="1">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                        <button type="button" class="btn btn-primary" id="confirmAddModelBtn">添加</button>
                     </div>
                 </div>
             </div>
@@ -317,10 +349,8 @@
             document.getElementById('openai_key').value = configData.openai_key || '';
             document.getElementById('openai_endpoint').value = configData.openai_endpoint || '';
             
-            if (configData.openai_models && configData.openai_models.gpt) {
-                document.getElementById('openai_model_id').value = configData.openai_models.gpt.id || '';
-                document.getElementById('openai_chunk_per_edit').value = configData.openai_models.gpt.chunk_per_edit || 1;
-            }
+            // 渲染模型设置
+            renderAIModels();
         }
 
         // 渲染聊天频道设置
@@ -407,6 +437,78 @@
             }
         }
 
+        // 渲染 AI 模型设置
+        function renderAIModels() {
+            const container = document.getElementById('ai_models_container');
+            container.innerHTML = '';
+            
+            if (configData.openai_models && Object.keys(configData.openai_models).length > 0) {
+                Object.entries(configData.openai_models).forEach(([modelName, modelConfig]) => {
+                    const modelRow = document.createElement('div');
+                    modelRow.className = 'ai-model-item card mb-2';
+                    modelRow.dataset.modelName = modelName;
+                    
+                    modelRow.innerHTML = `
+                        <div class="card-body p-3">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <div>
+                                    <h6 class="mb-0">模型名称: ${modelName}</h6>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-danger delete-model-btn" data-model-name="${modelName}">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                            <div class="row g-2">
+                                <div class="col-md-8">
+                                    <div class="input-group input-group-sm">
+                                        <span class="input-group-text">模型 ID</span>
+                                        <input type="text" class="form-control model-id-input" data-model-name="${modelName}" value="${modelConfig.id || ''}">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="input-group input-group-sm">
+                                        <span class="input-group-text">块数</span>
+                                        <input type="number" class="form-control model-chunk-input" data-model-name="${modelName}" value="${modelConfig.chunk_per_edit || 10}" min="1">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    container.appendChild(modelRow);
+                });
+                
+                // 添加模型输入变化事件
+                document.querySelectorAll('.model-id-input').forEach(input => {
+                    input.addEventListener('change', function() {
+                        const modelName = this.dataset.modelName;
+                        configData.openai_models[modelName].id = this.value;
+                    });
+                });
+                
+                document.querySelectorAll('.model-chunk-input').forEach(input => {
+                    input.addEventListener('change', function() {
+                        const modelName = this.dataset.modelName;
+                        configData.openai_models[modelName].chunk_per_edit = parseInt(this.value);
+                    });
+                });
+                
+                // 添加删除按钮事件
+                document.querySelectorAll('.delete-model-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const modelName = this.dataset.modelName;
+                        if (confirm(`确定要删除模型 ${modelName} 吗？`)) {
+                            delete configData.openai_models[modelName];
+                            renderAIModels();
+                        }
+                    });
+                });
+            } else {
+                container.innerHTML = '<div class="alert alert-info">暂无 AI 模型配置，请添加。</div>';
+                configData.openai_models = {};
+            }
+        }
+
         // 设置事件监听器
         function setupEventListeners() {
             // 添加频道按钮
@@ -457,6 +559,49 @@
                 }
             });
             
+            // 添加模型按钮
+            document.getElementById('addModelBtn').addEventListener('click', function() {
+                const modal = new bootstrap.Modal(document.getElementById('addModelModal'));
+                modal.show();
+            });
+            
+            // 确认添加模型按钮
+            document.getElementById('confirmAddModelBtn').addEventListener('click', function() {
+                const modelName = document.getElementById('new_model_name').value.trim();
+                const modelId = document.getElementById('new_model_id').value.trim();
+                const chunkPerEdit = parseInt(document.getElementById('new_model_chunk_per_edit').value);
+                
+                if (!modelName) {
+                    alert('请输入模型名称');
+                    return;
+                }
+                
+                if (!modelId) {
+                    alert('请输入模型 ID');
+                    return;
+                }
+                
+                if (!configData.openai_models) {
+                    configData.openai_models = {};
+                }
+                
+                configData.openai_models[modelName] = {
+                    id: modelId,
+                    chunk_per_edit: chunkPerEdit
+                };
+                
+                // 刷新显示
+                renderAIModels();
+                
+                // 关闭模态框
+                bootstrap.Modal.getInstance(document.getElementById('addModelModal')).hide();
+                
+                // 清空输入
+                document.getElementById('new_model_name').value = '';
+                document.getElementById('new_model_id').value = '';
+                document.getElementById('new_model_chunk_per_edit').value = '10';
+            });
+            
             // 保存配置按钮
             document.getElementById('saveConfigBtn').addEventListener('click', saveConfig);
         }
@@ -481,17 +626,6 @@
             // OpenAI 设置
             configData.openai_key = document.getElementById('openai_key').value;
             configData.openai_endpoint = document.getElementById('openai_endpoint').value;
-            
-            if (!configData.openai_models) {
-                configData.openai_models = {};
-            }
-            
-            if (!configData.openai_models.gpt) {
-                configData.openai_models.gpt = {};
-            }
-            
-            configData.openai_models.gpt.id = document.getElementById('openai_model_id').value;
-            configData.openai_models.gpt.chunk_per_edit = parseInt(document.getElementById('openai_chunk_per_edit').value);
             
             return configData;
         }

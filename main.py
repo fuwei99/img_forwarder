@@ -236,6 +236,20 @@ async def on_ready():
     
     print('-' * 50)
 
+# 添加一个帮助调试的命令，用于检查已加载的cog
+@bot.command(name="list_cogs")
+@commands.is_owner()
+async def list_cogs(ctx):
+    loaded_cogs = sorted(list(bot.cogs.keys()))
+    all_cogs = sorted([f.replace('.py', '') for f in os.listdir('cogs') if f.endswith('.py')])
+    
+    not_loaded = [cog for cog in all_cogs if cog not in [c.lower() for c in loaded_cogs]]
+    
+    await ctx.send(f"**已加载的Cogs ({len(loaded_cogs)}):**\n"
+                  f"{', '.join(loaded_cogs)}\n\n"
+                  f"**未加载的Cogs ({len(not_loaded)}):**\n"
+                  f"{', '.join(not_loaded)}")
+
 def start_flask():
     # 创建默认头像
     create_default_avatar()

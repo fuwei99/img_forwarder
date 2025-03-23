@@ -91,18 +91,22 @@ class ContextPrompter:
         context = await self.get_context_for_prompt(ctx, context_length)
         name = name if name else ctx.me.display_name
         
-        # 使用模板，传递频道ID
-        template = self._get_template("chat_prompt.txt", ctx.channel.id)
-        if template:
-            return template.format(
-                context=context,
-                question=question,
-                name=name,
-                bot_name=ctx.me.name,
-                current_time=now(tz=self.tz),
-                user_display_name=ctx.author.display_name,
-                user_name=ctx.author.name
-            )
+        # 获取预设模板
+        if self.agent_manager:
+            # 获取预设JSON
+            preset = self.agent_manager.get_preset_json("chat_preset.json", ctx.channel.id)
+            if preset and "main_content" in preset:
+                # 使用预设中的main_content，并替换其中的模板变量
+                main_content = preset["main_content"]
+                return main_content.format(
+                    context=context,
+                    question=question,
+                    name=name,
+                    bot_name=ctx.me.name,
+                    current_time=now(tz=self.tz),
+                    user_display_name=ctx.author.display_name,
+                    user_name=ctx.author.name
+                )
         
         # 回退到原始模板
         prompt = f"""
@@ -136,22 +140,26 @@ class ContextPrompter:
         )
         name = name if name else ctx.me.display_name
         
-        # 使用模板
-        template = self._get_template("chat_prompt_with_reference.txt", ctx.channel.id)
-        if template:
-            return template.format(
-                context=context,
-                question=question,
-                name=name,
-                bot_name=ctx.me.name,
-                current_time=now(tz=self.tz),
-                user_display_name=ctx.author.display_name,
-                user_name=ctx.author.name,
-                reference_user_display_name=reference.author.display_name,
-                reference_user_name=reference.author.name,
-                reference_time=self.get_msg_time(reference),
-                reference_content=reference.content
-            )
+        # 获取预设模板
+        if self.agent_manager:
+            # 获取预设JSON
+            preset = self.agent_manager.get_preset_json("reference_preset.json", ctx.channel.id)
+            if preset and "main_content" in preset:
+                # 使用预设中的main_content，并替换其中的模板变量
+                main_content = preset["main_content"]
+                return main_content.format(
+                    context=context,
+                    question=question,
+                    name=name,
+                    bot_name=ctx.me.name,
+                    current_time=now(tz=self.tz),
+                    user_display_name=ctx.author.display_name,
+                    user_name=ctx.author.name,
+                    reference_user_display_name=reference.author.display_name,
+                    reference_user_name=reference.author.name,
+                    reference_time=self.get_msg_time(reference),
+                    reference_content=reference.content
+                )
         
         # 回退到原始模板
         prompt = f"""

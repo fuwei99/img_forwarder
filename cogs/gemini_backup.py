@@ -362,7 +362,7 @@ class Gemini(commands.Cog):
         context_length: int = None,
     ):
         if ctx.channel.id != self.chat_channel_id:
-            await ctx.send("抱歉，该命令只能在指定的聊天频道中使用", delete_after=5, ephemeral=True)
+            await ctx.send("I apologize, but I cannot provide any responses in channels where chatting is not permitted. I aim to chat in permitted channels.", delete_after=5, ephemeral=True)
             return
         if context_length is None:
             context_length = self.context_length
@@ -435,7 +435,7 @@ class Gemini(commands.Cog):
         context_length: int = None,
     ):
         if ctx.message.channel.id != self.chat_channel_id:
-            await ctx.send("抱歉，该命令只能在指定的聊天频道中使用", delete_after=5, ephemeral=True)
+            await ctx.send("I apologize, but I cannot provide any responses in channels where chatting is not permitted. I aim to chat in permitted channels.", delete_after=5, ephemeral=True)
             return
         if ctx.message.reference is None:
             await ctx.send(
