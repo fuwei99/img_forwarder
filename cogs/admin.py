@@ -108,4 +108,3 @@ class Admin(commands.Cog):
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(Admin(bot))
-    print(cpr.success("Cog loaded: Admin"))

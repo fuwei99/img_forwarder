@@ -3,6 +3,7 @@ from discord.ext import commands
 import discord
 from aiohttp import ClientSession
 import asyncio
+import base64
 
 from utils.color_printer import cpr
 from utils.config import config
@@ -37,13 +38,31 @@ class Openai(commands.Cog):
         agent_manager = self.bot.get_cog("AgentManager")
         if agent_manager:
             self.context_prompter.set_agent_manager(agent_manager)
-            print(f"OpenAI cog: AgentManager 已设置到 ContextPrompter")
 
     def update_chat_channels(self):
         """更新聊天频道配置"""
+        # 获取所有服务器的聊天频道配置
+        self.chat_channels = {}
+        servers_config = config.get_all_servers()
+        
+        for server_id, server_config in servers_config.items():
+            if "chat_channels" in server_config:
+                # 将每个服务器的聊天频道合并到总的字典中
+                for channel_id, channel_config in server_config["chat_channels"].items():
+                    self.chat_channels[str(channel_id)] = {
+                        "preset": channel_config.get("preset", "default"),
+                        "server_id": server_id  # 记录该频道属于哪个服务器
+                    }
+        
+        # 向后兼容：如果存在老版本的频道配置，也添加到频道列表中
         chat_channels = config.get("chat_channels", {})
-        self.chat_channels = {str(channel_id): settings for channel_id, settings in chat_channels.items()}
-        print(f"OpenAI cog 已更新频道配置: {list(self.chat_channels.keys())}")
+        if chat_channels:
+            for channel_id, channel_config in chat_channels.items():
+                if channel_id not in self.chat_channels:
+                    self.chat_channels[str(channel_id)] = {
+                        "preset": channel_config.get("preset", "default"),
+                        "server_id": "server_1"  # 假定属于server_1
+                    }
 
     async def request_openai(self, model: str, prompt: str, username: str, channel_id=None) -> str:
         url = f"{self.endpoint}/chat/completions"
@@ -51,6 +70,14 @@ class Openai(commands.Cog):
             "Content-Type": "application/json",
             "Authorization": f"Bearer {self.key}",
         }
+        
+        # 尝试获取频道所属的guild_id
+        guild_id = None
+        if channel_id and channel_id in self.chat_channels:
+            # 查找频道对应的Discord频道以获取guild_id
+            channel = self.bot.get_channel(int(channel_id))
+            if channel and hasattr(channel, 'guild'):
+                guild_id = channel.guild.id
         
         # 尝试从Agent Manager获取配置
         openai_config = {}
@@ -60,18 +87,18 @@ class Openai(commands.Cog):
             agent_manager = self.bot.get_cog("AgentManager")
             if agent_manager:
                 # 获取OpenAI配置
-                config_from_preset = agent_manager.get_preset_json("openai_config.json", channel_id)
+                config_from_preset = agent_manager.get_preset_json("openai_config.json", channel_id, guild_id)
                 if config_from_preset:
                     openai_config = config_from_preset
                 
                 # 根据当前的使用场景选择预设
                 # 这里根据prompt内容判断使用哪种预设
                 if "<reference>" in prompt and "<attachment>" in prompt:
-                    preset = agent_manager.get_preset_json("attachment_preset.json", channel_id)
+                    preset = agent_manager.get_preset_json("attachment_preset.json", channel_id, guild_id)
                 elif "<reference>" in prompt:
-                    preset = agent_manager.get_preset_json("reference_preset.json", channel_id)
+                    preset = agent_manager.get_preset_json("reference_preset.json", channel_id, guild_id)
                 else:
-                    preset = agent_manager.get_preset_json("chat_preset.json", channel_id)
+                    preset = agent_manager.get_preset_json("chat_preset.json", channel_id, guild_id)
         
         # 构建消息
         messages = []
@@ -136,12 +163,15 @@ class Openai(commands.Cog):
         question: str,
         context_length: int = None,
     ):
-        channel_id = ctx.channel.id
-        if str(channel_id) not in self.chat_channels:
+        channel_id = str(ctx.channel.id)
+        if channel_id not in self.chat_channels:
             await ctx.send("I apologize, but I cannot provide any responses in channels where chatting is not permitted. I aim to chat in permitted channels.", delete_after=5, ephemeral=True)
             return
         if context_length is None:
             context_length = self.context_length
+        
+        # 获取当前服务器ID
+        server_id = self.chat_channels[channel_id].get("server_id", "server_1")
         
         # 模型名称作为用户名
         username = model
@@ -167,7 +197,7 @@ class Openai(commands.Cog):
             if isinstance(ctx.channel, discord.Thread):
                 # 发送初始消息到线程中
                 typing_msg = await webhook.send(
-                    content="正在输入...", 
+                    content="typing...", 
                     username=username, 
                     avatar_url=avatar_url, 
                     wait=True,
@@ -176,7 +206,7 @@ class Openai(commands.Cog):
             else:
                 # 发送到普通文字频道
                 typing_msg = await webhook.send(
-                    content="正在输入...", 
+                    content="typing...", 
                     username=username, 
                     avatar_url=avatar_url, 
                     wait=True
@@ -192,12 +222,15 @@ class Openai(commands.Cog):
     async def yoo(
         self, ctx: commands.Context, *, question: str, context_length: int = None
     ):
-        channel_id = ctx.channel.id
-        if str(channel_id) not in self.chat_channels:
+        channel_id = str(ctx.channel.id)
+        if channel_id not in self.chat_channels:
             await ctx.send("I apologize, but I cannot provide any responses in channels where chatting is not permitted. I aim to chat in permitted channels.", delete_after=5, ephemeral=True)
             return
         if context_length is None:
             context_length = self.context_length
+        
+        # 获取当前服务器ID
+        server_id = self.chat_channels[channel_id].get("server_id", "server_1")
         
         # 使用默认模型
         model = self.model
@@ -224,7 +257,7 @@ class Openai(commands.Cog):
             if isinstance(ctx.channel, discord.Thread):
                 # 发送初始消息到线程中
                 typing_msg = await webhook.send(
-                    content="正在输入...", 
+                    content="typing...", 
                     username=username, 
                     avatar_url=avatar_url, 
                     wait=True,
@@ -233,7 +266,7 @@ class Openai(commands.Cog):
             else:
                 # 发送到普通文字频道
                 typing_msg = await webhook.send(
-                    content="正在输入...", 
+                    content="typing...", 
                     username=username, 
                     avatar_url=avatar_url, 
                     wait=True
@@ -270,12 +303,20 @@ class Openai(commands.Cog):
         
     async def get_model_avatar_url(self, model: str, channel_id=None):
         """获取模型对应的头像URL"""
+        # 如果有频道ID，尝试获取其所属的guild_id
+        guild_id = None
+        if channel_id and channel_id in self.chat_channels:
+            # 查找频道对应的Discord频道以获取guild_id
+            channel = self.bot.get_channel(int(channel_id))
+            if channel and hasattr(channel, 'guild'):
+                guild_id = channel.guild.id
+        
         # 尝试从Agent Manager获取预设信息
         if hasattr(self.bot, "get_cog"):
             agent_manager = self.bot.get_cog("AgentManager")
             if agent_manager:
-                # 获取当前频道的预设
-                preset_path = agent_manager.get_current_preset_path(channel_id)
+                # 获取当前频道的预设，传递guild_id参数
+                preset_path = agent_manager.get_current_preset_path(channel_id, guild_id)
                 # 预设目录下可能有avatar文件
                 import os
                 import glob
@@ -298,6 +339,14 @@ class Openai(commands.Cog):
             "Authorization": f"Bearer {self.key}",
         }
         
+        # 尝试获取频道所属的guild_id
+        guild_id = None
+        if channel_id and channel_id in self.chat_channels:
+            # 查找频道对应的Discord频道以获取guild_id
+            channel = self.bot.get_channel(int(channel_id))
+            if channel and hasattr(channel, 'guild'):
+                guild_id = channel.guild.id
+        
         # 尝试从Agent Manager获取配置
         openai_config = {}
         preset = None
@@ -305,18 +354,18 @@ class Openai(commands.Cog):
         if hasattr(self.bot, "get_cog"):
             agent_manager = self.bot.get_cog("AgentManager")
             if agent_manager:
-                # 获取OpenAI配置
-                config_from_preset = agent_manager.get_preset_json("openai_config.json", channel_id)
+                # 获取OpenAI配置，传递guild_id参数
+                config_from_preset = agent_manager.get_preset_json("openai_config.json", channel_id, guild_id)
                 if config_from_preset:
                     openai_config = config_from_preset
                 
                 # 根据当前的使用场景选择预设
                 if "<reference>" in prompt and "<attachment>" in prompt:
-                    preset = agent_manager.get_preset_json("attachment_preset.json", channel_id)
+                    preset = agent_manager.get_preset_json("attachment_preset.json", channel_id, guild_id)
                 elif "<reference>" in prompt:
-                    preset = agent_manager.get_preset_json("reference_preset.json", channel_id)
+                    preset = agent_manager.get_preset_json("reference_preset.json", channel_id, guild_id)
                 else:
-                    preset = agent_manager.get_preset_json("chat_preset.json", channel_id)
+                    preset = agent_manager.get_preset_json("chat_preset.json", channel_id, guild_id)
         
         # 构建消息
         messages = []
@@ -465,17 +514,30 @@ class Openai(commands.Cog):
         except Exception as e:
             await ctx.send(f"Invalid timezone.", ephemeral=True, delete_after=5)
 
+    def update_api_key(self):
+        """更新api_key"""
+        # 获取当前的所有api_key
+        self.api_keys = []
+        # 加载配置
+        self.key_type = config.get("openai_key_type", "base64")
+        if self.key_type == "base64":
+            # 获取加密的api_key列表
+            encoded_api_keys = config.get("openai_api_keys", [])
+            # 解密api_key列表
+            for encoded_api_key in encoded_api_keys:
+                try:
+                    # 进行base64解码
+                    api_key = base64.b64decode(encoded_api_key).decode("utf-8")
+                    self.api_keys.append(api_key)
+                except Exception as e:
+                    logger.error(f"解密API Key失败：{e}")
+        else:
+            # 直接获取未加密的api_key列表
+            self.api_keys = config.get("openai_api_keys", [])
+        # 获取代理设置
+        self.proxy = config.get("openai_proxy", "")
+
 
 async def setup(bot: commands.Bot):
-    openai_key = config.get("openai_key", "")
-    if not openai_key or openai_key == "YOUR_OPENAI_API_KEY":
-        print(cpr.warning("OpenAI API key not set, skipping OpenAI setup"))
-        return
-
     webhook_url = config.get("webhook_url")
-    if not webhook_url:
-        print(cpr.error("Webhook URL not set, cannot setup OpenAI"))
-        return
-
     await bot.add_cog(Openai(bot, webhook_url))
-    print(cpr.success("Cog loaded: Openai"))

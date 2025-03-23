@@ -23,12 +23,6 @@ class ContextPrompter:
         """
         使用正则表达式预处理上下文内容，删除命令触发词
         例如: .hey, .yo claude, .yoo 等，这些只是触发词对机器人理解没有用处
-        
-        Args:
-            context: 需要处理的上下文内容
-            
-        Returns:
-            处理后的上下文内容
         """
         # 匹配并删除命令触发词
         # 1. 匹配 .hey, .yo, .yoo 后跟空格和可能的参数

@@ -43,7 +43,7 @@
                             <button class="nav-link active" id="basic-tab" data-bs-toggle="tab" data-bs-target="#basic-pane" type="button" role="tab">基本设置</button>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="channels-tab" data-bs-toggle="tab" data-bs-target="#channels-pane" type="button" role="tab">频道设置</button>
+                            <button class="nav-link" id="servers-tab" data-bs-toggle="tab" data-bs-target="#servers-pane" type="button" role="tab">服务器配置</button>
                         </li>
                         <li class="nav-item" role="presentation">
                             <button class="nav-link" id="gemini-tab" data-bs-toggle="tab" data-bs-target="#gemini-pane" type="button" role="tab">Gemini 设置</button>
@@ -86,51 +86,18 @@
                             </div>
                         </div>
 
-                        <!-- 频道设置 -->
-                        <div class="tab-pane fade" id="channels-pane" role="tabpanel" aria-labelledby="channels-tab">
-                            <div class="mb-4">
-                                <div class="row g-3 mb-3">
-                                    <div class="col-md-6">
-                                        <div class="form-floating">
-                                            <input type="text" class="form-control" id="target_channel_id" name="target_channel_id">
-                                            <label for="target_channel_id">目标频道 ID</label>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="form-floating">
-                                            <input type="text" class="form-control" id="source_channel_id" name="source_channel_id">
-                                            <label for="source_channel_id">源频道 ID</label>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="row g-3">
-                                    <div class="col-md-6">
-                                        <div class="form-floating">
-                                            <input type="text" class="form-control" id="backup_channel_id" name="backup_channel_id">
-                                            <label for="backup_channel_id">备份频道 ID</label>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="form-floating">
-                                            <input type="text" class="form-control" id="main_channel_id" name="main_channel_id">
-                                            <label for="main_channel_id">主频道 ID</label>
-                                        </div>
-                                    </div>
-                                </div>
+                        <!-- 服务器配置 -->
+                        <div class="tab-pane fade" id="servers-pane" role="tabpanel" aria-labelledby="servers-tab">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h4>服务器列表</h4>
+                                <button type="button" class="btn btn-primary" id="addServerBtn">
+                                    <i class="bi bi-plus"></i> 添加服务器
+                                </button>
                             </div>
 
-                            <div class="card mb-3">
-                                <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                                    <h5 class="mb-0">聊天频道配置</h5>
-                                    <button type="button" class="btn btn-sm btn-primary" id="addChannelBtn">
-                                        <i class="bi bi-plus"></i> 添加频道
-                                    </button>
-                                </div>
-                                <div class="card-body">
-                                    <div id="chat_channels_container" class="mb-3">
-                                        <!-- 这里会动态添加频道设置 -->
-                                    </div>
-                                </div>
+                            <!-- 服务器列表和配置 -->
+                            <div id="serverAccordion" class="accordion mb-4">
+                                <!-- 这里会动态添加服务器配置面板 -->
                             </div>
                         </div>
 
@@ -207,6 +174,39 @@
             </div>
         </div>
 
+        <!-- 添加服务器模态框 -->
+        <div class="modal fade" id="addServerModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">添加服务器</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="new_server_id" class="form-label">服务器 ID</label>
+                            <input type="text" class="form-control" id="new_server_id" placeholder="例如: server_3">
+                            <div class="form-text">用于在配置中标识此服务器的ID</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="new_server_name" class="form-label">服务器名称</label>
+                            <input type="text" class="form-control" id="new_server_name" placeholder="例如: 测试服务器">
+                            <div class="form-text">为此服务器设置一个友好的名称</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="new_discord_guild_id" class="form-label">Discord 服务器 ID</label>
+                            <input type="text" class="form-control" id="new_discord_guild_id" placeholder="例如: 1077066115787067392">
+                            <div class="form-text">Discord 服务器的唯一 ID</div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                        <button type="button" class="btn btn-primary" id="confirmAddServerBtn">添加</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- 添加频道模态框 -->
         <div class="modal fade" id="addChannelModal" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog">
@@ -216,6 +216,7 @@
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
+                        <input type="hidden" id="current_server_id" value="">
                         <div class="mb-3">
                             <label for="new_channel_id" class="form-label">频道 ID</label>
                             <input type="text" class="form-control" id="new_channel_id" placeholder="输入频道 ID">
@@ -331,14 +332,8 @@
             document.getElementById('target_language').value = configData.target_language || 'Chinese';
             document.getElementById('webhook_url').value = configData.webhook_url || '';
             
-            // 频道设置
-            document.getElementById('target_channel_id').value = configData.target_channel_id || '';
-            document.getElementById('source_channel_id').value = configData.source_channel_id || '';
-            document.getElementById('backup_channel_id').value = configData.backup_channel_id || '';
-            document.getElementById('main_channel_id').value = configData.main_channel_id || '';
-            
-            // 聊天频道
-            renderChatChannels();
+            // 服务器配置
+            renderServers();
             
             // Gemini 设置
             document.getElementById('current_key').value = configData.current_key || 0;
@@ -353,25 +348,181 @@
             renderAIModels();
         }
 
-        // 渲染聊天频道设置
-        function renderChatChannels() {
-            const container = document.getElementById('chat_channels_container');
+        // 渲染服务器列表和配置
+        function renderServers() {
+            const container = document.getElementById('serverAccordion');
             container.innerHTML = '';
             
-            if (configData.chat_channels && Object.keys(configData.chat_channels).length > 0) {
-                Object.entries(configData.chat_channels).forEach(([channelId, channelConfig]) => {
+            const servers = configData.servers || {};
+            
+            if (Object.keys(servers).length === 0) {
+                container.innerHTML = '<div class="alert alert-info">暂无服务器配置，请添加服务器。</div>';
+                return;
+            }
+            
+            // 为每个服务器创建一个可折叠面板
+            Object.entries(servers).forEach(([serverId, serverConfig], index) => {
+                const serverPanel = document.createElement('div');
+                serverPanel.className = 'accordion-item mb-3';
+                serverPanel.dataset.serverId = serverId;
+                
+                // 创建面板头部
+                const headerId = `heading_${serverId}`;
+                const collapseId = `collapse_${serverId}`;
+                
+                // 自动展开第一个服务器
+                const show = index === 0 ? 'show' : '';
+                
+                serverPanel.innerHTML = `
+                    <h2 class="accordion-header" id="${headerId}">
+                        <button class="accordion-button ${index === 0 ? '' : 'collapsed'}" type="button" data-bs-toggle="collapse"
+                            data-bs-target="#${collapseId}" aria-expanded="${index === 0 ? 'true' : 'false'}" aria-controls="${collapseId}">
+                            ${serverConfig.name || '服务器'}: ${serverId}
+                        </button>
+                    </h2>
+                    <div id="${collapseId}" class="accordion-collapse collapse ${show}"
+                        aria-labelledby="${headerId}" data-bs-parent="#serverAccordion">
+                        <div class="accordion-body">
+                            <div class="d-flex justify-content-end mb-3">
+                                <button type="button" class="btn btn-sm btn-danger delete-server-btn" data-server-id="${serverId}">
+                                    <i class="bi bi-trash"></i> 删除服务器
+                                </button>
+                            </div>
+                            
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-6">
+                                    <div class="form-floating">
+                                        <input type="text" class="form-control server-channel-input" id="name_${serverId}" 
+                                            data-server-id="${serverId}" data-field="name" value="${serverConfig.name || ''}">
+                                        <label for="name_${serverId}">服务器名称</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-floating">
+                                        <input type="text" class="form-control server-channel-input" id="discord_guild_id_${serverId}" 
+                                            data-server-id="${serverId}" data-field="discord_guild_id" value="${serverConfig.discord_guild_id || ''}">
+                                        <label for="discord_guild_id_${serverId}">Discord 服务器 ID</label>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-6">
+                                    <div class="form-floating">
+                                        <input type="text" class="form-control server-channel-input" id="source_channel_id_${serverId}" 
+                                            data-server-id="${serverId}" data-field="source_channel_id" value="${serverConfig.source_channel_id || ''}">
+                                        <label for="source_channel_id_${serverId}">源频道 ID</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-floating">
+                                        <input type="text" class="form-control server-channel-input" id="target_channel_id_${serverId}" 
+                                            data-server-id="${serverId}" data-field="target_channel_id" value="${serverConfig.target_channel_id || ''}">
+                                        <label for="target_channel_id_${serverId}">目标频道 ID</label>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row g-3 mb-4">
+                                <div class="col-md-6">
+                                    <div class="form-floating">
+                                        <input type="text" class="form-control server-channel-input" id="main_channel_id_${serverId}" 
+                                            data-server-id="${serverId}" data-field="main_channel_id" value="${serverConfig.main_channel_id || ''}">
+                                        <label for="main_channel_id_${serverId}">主频道 ID</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-floating">
+                                        <input type="text" class="form-control server-channel-input" id="backup_channel_id_${serverId}" 
+                                            data-server-id="${serverId}" data-field="backup_channel_id" value="${serverConfig.backup_channel_id || ''}">
+                                        <label for="backup_channel_id_${serverId}">备份频道 ID</label>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="card mb-3">
+                                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                                    <h5 class="mb-0">聊天频道配置</h5>
+                                    <button type="button" class="btn btn-sm btn-primary add-channel-btn" data-server-id="${serverId}">
+                                        <i class="bi bi-plus"></i> 添加频道
+                                    </button>
+                                </div>
+                                <div class="card-body">
+                                    <div id="chat_channels_container_${serverId}" class="mb-3">
+                                        <!-- 这里会动态添加频道设置 -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                container.appendChild(serverPanel);
+                
+                // 渲染该服务器的聊天频道
+                renderServerChatChannels(serverId, serverConfig.chat_channels || {});
+            });
+            
+            // 添加删除服务器按钮事件
+            document.querySelectorAll('.delete-server-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const serverId = this.dataset.serverId;
+                    if (confirm(`确定要删除服务器 ${serverId} 吗？此操作不可撤销！`)) {
+                        delete configData.servers[serverId];
+                        renderServers();
+                    }
+                });
+            });
+            
+            // 添加服务器频道输入变化事件
+            document.querySelectorAll('.server-channel-input').forEach(input => {
+                input.addEventListener('change', function() {
+                    const serverId = this.dataset.serverId;
+                    const field = this.dataset.field;
+                    configData.servers[serverId][field] = this.value;
+                });
+            });
+            
+            // 添加添加频道按钮事件
+            document.querySelectorAll('.add-channel-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const serverId = this.dataset.serverId;
+                    document.getElementById('current_server_id').value = serverId;
+                    const modal = new bootstrap.Modal(document.getElementById('addChannelModal'));
+                    modal.show();
+                });
+            });
+        }
+        
+        // 渲染服务器的聊天频道
+        function renderServerChatChannels(serverId, chatChannels) {
+            const container = document.getElementById(`chat_channels_container_${serverId}`);
+            container.innerHTML = '';
+            
+            if (Object.keys(chatChannels).length === 0) {
+                container.innerHTML = '<div class="alert alert-info">暂无聊天频道配置，请添加。</div>';
+                return;
+            }
+            
+            Object.entries(chatChannels).forEach(([channelId, channelConfig]) => {
                     const channelRow = document.createElement('div');
                     channelRow.className = 'chat-channel-item card mb-2';
                     channelRow.dataset.channelId = channelId;
+                channelRow.dataset.serverId = serverId;
+                
+                // 判断是否是主频道
+                const isMainChannel = configData.servers[serverId] && 
+                                     configData.servers[serverId].main_channel_id === channelId;
                     
                     channelRow.innerHTML = `
                         <div class="card-body p-3">
                             <div class="d-flex justify-content-between align-items-center">
                                 <div>
-                                    <h6 class="mb-0">频道 ID: ${channelId}</h6>
-                                    <p class="mb-0 text-muted small">预设: ${channelConfig.preset}</p>
+                                <h6 class="mb-0">频道 ID: ${channelId} ${isMainChannel ? '<span class="badge bg-primary">主频道</span>' : ''}</h6>
+                                <p class="mb-0 text-muted small">预设: ${channelConfig.preset || 'default'}</p>
                                 </div>
-                                <button type="button" class="btn btn-sm btn-danger delete-channel-btn" data-channel-id="${channelId}">
+                            <button type="button" class="btn btn-sm btn-danger delete-channel-btn" 
+                                data-channel-id="${channelId}" data-server-id="${serverId}" ${isMainChannel ? 'disabled' : ''}>
                                     <i class="bi bi-trash"></i>
                                 </button>
                             </div>
@@ -381,19 +532,30 @@
                     container.appendChild(channelRow);
                 });
                 
-                // 添加删除按钮事件
+            // 使用统一的函数绑定删除按钮事件
+            addDeleteChannelEvents();
+        }
+
+        // 添加删除频道按钮事件
+        function addDeleteChannelEvents() {
                 document.querySelectorAll('.delete-channel-btn').forEach(btn => {
                     btn.addEventListener('click', function() {
                         const channelId = this.dataset.channelId;
-                        if (confirm(`确定要删除频道 ${channelId} 吗？`)) {
-                            delete configData.chat_channels[channelId];
-                            renderChatChannels();
+                    const serverId = this.dataset.serverId;
+                    
+                    // 检查是否是主频道
+                    if (configData.servers[serverId] && 
+                        configData.servers[serverId].main_channel_id === channelId) {
+                        alert("无法删除主频道，请先设置其他频道为主频道");
+                        return;
+                    }
+                    
+                    if (confirm(`确定要删除此频道配置吗？ID: ${channelId}`)) {
+                        delete configData.servers[serverId].chat_channels[channelId];
+                        renderServerChatChannels(serverId, configData.servers[serverId].chat_channels);
                         }
                     });
                 });
-            } else {
-                container.innerHTML = '<div class="alert alert-info">暂无聊天频道配置，请添加。</div>';
-            }
         }
 
         // 渲染 Gemini API 密钥
@@ -511,14 +673,69 @@
 
         // 设置事件监听器
         function setupEventListeners() {
-            // 添加频道按钮
-            document.getElementById('addChannelBtn').addEventListener('click', function() {
-                const modal = new bootstrap.Modal(document.getElementById('addChannelModal'));
+            // 添加服务器按钮
+            document.getElementById('addServerBtn').addEventListener('click', function() {
+                const modal = new bootstrap.Modal(document.getElementById('addServerModal'));
                 modal.show();
+            });
+            
+            // 确认添加服务器按钮
+            document.getElementById('confirmAddServerBtn').addEventListener('click', function() {
+                const serverId = document.getElementById('new_server_id').value.trim();
+                const serverName = document.getElementById('new_server_name').value.trim();
+                const discordGuildId = document.getElementById('new_discord_guild_id').value.trim();
+                
+                if (!serverId) {
+                    alert('请输入服务器 ID');
+                    return;
+                }
+                
+                if (!serverName) {
+                    alert('请输入服务器名称');
+                    return;
+                }
+                
+                if (!discordGuildId) {
+                    alert('请输入Discord 服务器 ID');
+                    return;
+                }
+                
+                if (!configData.servers) {
+                    configData.servers = {};
+                }
+                
+                if (configData.servers[serverId]) {
+                    alert(`服务器 ID '${serverId}' 已存在，请使用其他 ID`);
+                    return;
+                }
+                
+                // 创建新服务器配置
+                configData.servers[serverId] = {
+                    source_channel_id: "",
+                    target_channel_id: "",
+                    main_channel_id: "",
+                    backup_channel_id: "",
+                    chat_channels: {}
+                };
+                
+                configData.servers[serverId].name = serverName;
+                configData.servers[serverId].discord_guild_id = discordGuildId;
+                
+                // 刷新显示
+                renderServers();
+                
+                // 关闭模态框
+                bootstrap.Modal.getInstance(document.getElementById('addServerModal')).hide();
+                
+                // 清空输入
+                document.getElementById('new_server_id').value = '';
+                document.getElementById('new_server_name').value = '';
+                document.getElementById('new_discord_guild_id').value = '';
             });
             
             // 确认添加频道按钮
             document.getElementById('confirmAddChannelBtn').addEventListener('click', function() {
+                const serverId = document.getElementById('current_server_id').value;
                 const channelId = document.getElementById('new_channel_id').value.trim();
                 const preset = document.getElementById('new_channel_preset').value;
                 
@@ -527,14 +744,14 @@
                     return;
                 }
                 
-                if (!configData.chat_channels) {
-                    configData.chat_channels = {};
+                if (!configData.servers[serverId].chat_channels) {
+                    configData.servers[serverId].chat_channels = {};
                 }
                 
-                configData.chat_channels[channelId] = { preset };
+                configData.servers[serverId].chat_channels[channelId] = { preset };
                 
                 // 刷新显示
-                renderChatChannels();
+                renderServerChatChannels(serverId, configData.servers[serverId].chat_channels);
                 
                 // 关闭模态框
                 bootstrap.Modal.getInstance(document.getElementById('addChannelModal')).hide();
@@ -612,12 +829,6 @@
             configData.token = document.getElementById('token').value;
             configData.target_language = document.getElementById('target_language').value;
             configData.webhook_url = document.getElementById('webhook_url').value;
-            
-            // 频道设置
-            configData.target_channel_id = document.getElementById('target_channel_id').value;
-            configData.source_channel_id = document.getElementById('source_channel_id').value;
-            configData.backup_channel_id = document.getElementById('backup_channel_id').value;
-            configData.main_channel_id = document.getElementById('main_channel_id').value;
             
             // Gemini 设置
             configData.current_key = parseInt(document.getElementById('current_key').value);
