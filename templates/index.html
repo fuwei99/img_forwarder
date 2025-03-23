@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Discord 机器人管理</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+</head>
+<body>
+    <div class="container">
+        <header class="py-4 text-center">
+            <h1 class="display-4 fw-bold text-primary">Discord 机器人管理</h1>
+            <p class="lead">管理您的机器人配置和预设</p>
+        </header>
+
+        <div class="row g-4 py-4">
+            <div class="col-md-6">
+                <div class="card h-100 shadow hover-card">
+                    <div class="card-body text-center p-5">
+                        <i class="bi bi-gear-fill text-primary mb-3" style="font-size: 3rem;"></i>
+                        <h2 class="card-title mb-3">配置设置</h2>
+                        <p class="card-text">管理机器人的配置，包括令牌、频道ID、API密钥等。</p>
+                        <a href="/config" class="btn btn-primary btn-lg mt-3">管理配置</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card h-100 shadow hover-card">
+                    <div class="card-body text-center p-5">
+                        <i class="bi bi-braces-asterisk text-primary mb-3" style="font-size: 3rem;"></i>
+                        <h2 class="card-title mb-3">预设管理</h2>
+                        <p class="card-text">创建、编辑和删除机器人预设，自定义机器人行为和设置。</p>
+                        <a href="/presets" class="btn btn-primary btn-lg mt-3">管理预设</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer class="py-4 text-center text-muted">
+            <p>© 2024 Discord 机器人管理</p>
+        </footer>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html> 

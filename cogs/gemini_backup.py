@@ -12,7 +12,6 @@ from utils.config import config
 from utils.context_prompter import ContextPrompter
 from utils.logger import logger
 from datetime import datetime
-import PIL.Image
 
 
 class Gemini(commands.Cog):
@@ -26,10 +25,7 @@ class Gemini(commands.Cog):
         self.apikeys = config.get("gemini_keys")
         self.current_key = config.get("current_key")
         self.num = len(self.apikeys)
-        
-        # 确保chat_channels中的键全部为字符串
-        self.update_chat_channels()
-        
+        self.chat_channel_id = config.get("chat_channel_id")
         self.config = config
         self.context_length = 20
         self.target_language = config.get("target_language")
@@ -70,12 +66,6 @@ class Gemini(commands.Cog):
         if self.openai_api_key is not None and self.openai_endpoint is not None:
             print(cpr.info("OpenAI API available."))
 
-    def update_chat_channels(self):
-        """更新聊天频道配置"""
-        chat_channels = config.get("chat_channels", {})
-        self.chat_channels = {str(channel_id): settings for channel_id, settings in chat_channels.items()}
-        print(f"Gemini cog 已更新频道配置: {list(self.chat_channels.keys())}")
-
     def get_next_key(self):
         self.current_key = (self.current_key + 1) % self.num
         config.write("current_key", self.current_key)
@@ -96,14 +86,10 @@ class Gemini(commands.Cog):
         if model_config is None:
             model_config = self.default_gemini_config
         
-        # 获取当前频道ID
-        channel_id = str(ctx.channel.id)
-        print(f"当前频道ID: {channel_id}, 聊天频道列表: {list(self.chat_channels.keys())}, 在列表中: {channel_id in self.chat_channels}")
-        
         # 尝试获取预设
         agent_manager = self.bot.get_cog("AgentManager")
         preset_data = None
-        preset_name = "chat_preset.json"  # 默认使用chat_preset.json
+        preset_name = "chat_preset.json"
         
         # 根据情况选择不同的预设
         if extra_attachment:
@@ -112,9 +98,9 @@ class Gemini(commands.Cog):
         elif ctx.message.reference:
             preset_name = "reference_preset.json"
         
-        # 获取预设内容，传递频道ID以获取该频道对应的预设
+        # 获取预设内容
         if agent_manager:
-            preset_data = agent_manager.get_preset_json(preset_name, channel_id)
+            preset_data = agent_manager.get_preset_json(preset_name)
         
         if model != "gemini-2.0-pro-exp-02-05":
             key = self.get_random_key()
@@ -135,161 +121,162 @@ class Gemini(commands.Cog):
         else:
             msg = await ctx.send("Typing...") if username is None else await self.webhook.send("Typing...", wait=True, username=username)
         
-        # 检查预设数据是否存在
-        if not preset_data:
-            await msg.edit(content="无法加载预设数据，请联系管理员")
-            return
+        # 如果有预设数据，使用预设构建请求
+        if preset_data:
+            # 首先获取变量替换所需的数据
+            current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            bot_name = ctx.me.name
+            bot_display_name = ctx.me.display_name
+            user_name = ctx.author.name
+            user_display_name = ctx.author.display_name
             
-        # 首先获取变量替换所需的数据
-        current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        bot_name = ctx.me.name
-        bot_display_name = ctx.me.display_name
-        user_name = ctx.author.name
-        user_display_name = ctx.author.display_name
-        
-        # 处理上下文
-        context = ""
-        if hasattr(ctx, 'context') and ctx.context:
-            context = ctx.context
-        elif hasattr(ctx, 'history') and ctx.history:
-            context = ctx.history
-        else:
-            # 获取历史消息作为上下文
-            context = await self.context_prompter.get_context_for_prompt(ctx, self.context_length)
-        
-        # 确保context是字符串
-        if not isinstance(context, str):
-            context = str(context) if context is not None else ""
-        
-        # 替换预设中的变量
-        first_user_message = preset_data.get("first_user_message", "")
-        first_user_message = first_user_message.replace("{context}", context)
-        first_user_message = first_user_message.replace("{question}", prompt)
-        first_user_message = first_user_message.replace("{name}", bot_display_name)
-        first_user_message = first_user_message.replace("{bot_name}", bot_name)
-        first_user_message = first_user_message.replace("{current_time}", current_time)
-        first_user_message = first_user_message.replace("{user_display_name}", user_display_name)
-        first_user_message = first_user_message.replace("{user_name}", user_name)
-        
-        main_content = preset_data.get("main_content", "")
-        main_content = main_content.replace("{context}", context)
-        main_content = main_content.replace("{question}", prompt)
-        main_content = main_content.replace("{name}", bot_display_name)
-        main_content = main_content.replace("{bot_name}", bot_name)
-        main_content = main_content.replace("{current_time}", current_time)
-        main_content = main_content.replace("{user_display_name}", user_display_name)
-        main_content = main_content.replace("{user_name}", user_name)
-        
-        # 如果是引用回复
-        if ctx.message.reference and 'reference' in preset_name:
-            reference = ctx.message.reference.resolved
-            reference_time = reference.created_at.strftime("%Y-%m-%d %H:%M:%S")
-            reference_user_name = reference.author.name
-            reference_user_display_name = reference.author.display_name
-            reference_content = reference.content
+            # 处理上下文
+            context = ""
+            if hasattr(ctx, 'context') and ctx.context:
+                context = ctx.context
+            elif hasattr(ctx, 'history') and ctx.history:
+                context = ctx.history
+            else:
+                # 获取历史消息作为上下文
+                context = await self.context_prompter.get_context_for_prompt(ctx, self.context_length)
             
-            main_content = main_content.replace("{reference_time}", reference_time)
-            main_content = main_content.replace("{reference_user_name}", reference_user_name)
-            main_content = main_content.replace("{reference_user_display_name}", reference_user_display_name)
-            main_content = main_content.replace("{reference_content}", reference_content)
-            first_user_message = first_user_message.replace("{reference_time}", reference_time)
-            first_user_message = first_user_message.replace("{reference_user_name}", reference_user_name)
-            first_user_message = first_user_message.replace("{reference_user_display_name}", reference_user_display_name)
-            first_user_message = first_user_message.replace("{reference_content}", reference_content)
-        
-        last_user_message = preset_data.get("last_user_message", "")
-        last_user_message = last_user_message.replace("{context}", context)
-        last_user_message = last_user_message.replace("{question}", prompt)
-        last_user_message = last_user_message.replace("{name}", bot_display_name)
-        last_user_message = last_user_message.replace("{bot_name}", bot_name)
-        last_user_message = last_user_message.replace("{current_time}", current_time)
-        last_user_message = last_user_message.replace("{user_display_name}", user_display_name)
-        last_user_message = last_user_message.replace("{user_name}", user_name)
-        
-        # 构建user-model-user的三个上下文
-        user_parts = [types.Part.from_text(text=first_user_message)]
-        model_parts = [types.Part.from_text(text=main_content)]
-        last_user_parts = [types.Part.from_text(text=last_user_message)]
-        
-        # 如果有附件，添加到最后一个用户消息中
-        if attachment_bytes:
-            # 使用Pillow和inline_data方式添加图片
-            image_bytes = BytesIO(attachment_bytes)
-            image = PIL.Image.open(image_bytes)
+            # 确保context是字符串
+            if not isinstance(context, str):
+                context = str(context) if context is not None else ""
             
-            # 转换为字节数据
-            mime_type = attachment_mime_type or "image/jpeg"
-            img_byte_arr = BytesIO()
-            image.save(img_byte_arr, format=image.format or "JPEG")
-            img_byte_data = img_byte_arr.getvalue()
+            # 替换预设中的变量
+            first_user_message = preset_data.get("first_user_message", "")
+            first_user_message = first_user_message.replace("{context}", context)
+            first_user_message = first_user_message.replace("{question}", prompt)
+            first_user_message = first_user_message.replace("{name}", bot_display_name)
+            first_user_message = first_user_message.replace("{bot_name}", bot_name)
+            first_user_message = first_user_message.replace("{current_time}", current_time)
+            first_user_message = first_user_message.replace("{user_display_name}", user_display_name)
+            first_user_message = first_user_message.replace("{user_name}", user_name)
             
-            # 添加到消息中
-            last_user_parts.append(
-                types.Part(
-                    inline_data=types.Blob(
-                        mime_type=mime_type,
-                        data=img_byte_data
+            main_content = preset_data.get("main_content", "")
+            main_content = main_content.replace("{context}", context)
+            main_content = main_content.replace("{question}", prompt)
+            main_content = main_content.replace("{name}", bot_display_name)
+            main_content = main_content.replace("{bot_name}", bot_name)
+            main_content = main_content.replace("{current_time}", current_time)
+            main_content = main_content.replace("{user_display_name}", user_display_name)
+            main_content = main_content.replace("{user_name}", user_name)
+            
+            # 如果是引用回复
+            if ctx.message.reference and 'reference' in preset_name:
+                reference = ctx.message.reference.resolved
+                reference_time = reference.created_at.strftime("%Y-%m-%d %H:%M:%S")
+                reference_user_name = reference.author.name
+                reference_user_display_name = reference.author.display_name
+                reference_content = reference.content
+                
+                main_content = main_content.replace("{reference_time}", reference_time)
+                main_content = main_content.replace("{reference_user_name}", reference_user_name)
+                main_content = main_content.replace("{reference_user_display_name}", reference_user_display_name)
+                main_content = main_content.replace("{reference_content}", reference_content)
+                first_user_message = first_user_message.replace("{reference_time}", reference_time)
+                first_user_message = first_user_message.replace("{reference_user_name}", reference_user_name)
+                first_user_message = first_user_message.replace("{reference_user_display_name}", reference_user_display_name)
+                first_user_message = first_user_message.replace("{reference_content}", reference_content)
+            
+            last_user_message = preset_data.get("last_user_message", "")
+            last_user_message = last_user_message.replace("{context}", context)
+            last_user_message = last_user_message.replace("{question}", prompt)
+            last_user_message = last_user_message.replace("{name}", bot_display_name)
+            last_user_message = last_user_message.replace("{bot_name}", bot_name)
+            last_user_message = last_user_message.replace("{current_time}", current_time)
+            last_user_message = last_user_message.replace("{user_display_name}", user_display_name)
+            last_user_message = last_user_message.replace("{user_name}", user_name)
+            
+            # 构建user-model-user的三个上下文
+            user_parts = [types.Part.from_text(text=first_user_message)]
+            model_parts = [types.Part.from_text(text=main_content)]
+            last_user_parts = [types.Part.from_text(text=last_user_message)]
+            
+            # 如果有附件，添加到最后一个用户消息中
+            if attachment_bytes:
+                # 使用inline_data方式添加附件
+                last_user_parts.append(
+                    types.Part(
+                        inline_data=types.Blob(
+                            mime_type=attachment_mime_type,
+                            data=attachment_bytes
+                        )
                     )
                 )
+                print("附件已添加到用户消息中")
+            
+            contents = [
+                types.Content(
+                    role="user",
+                    parts=user_parts,
+                ),
+                types.Content(
+                    role="model",
+                    parts=model_parts,
+                ),
+                types.Content(
+                    role="user",
+                    parts=last_user_parts,
+                ),
+            ]
+            
+            # 设置安全设置
+            safety_settings = [
+                types.SafetySetting(
+                    category=types.HarmCategory.HARM_CATEGORY_CIVIC_INTEGRITY,
+                    threshold=types.HarmBlockThreshold.OFF,
+                ),
+                types.SafetySetting(
+                    category=types.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+                    threshold=types.HarmBlockThreshold.OFF,
+                ),
+                types.SafetySetting(
+                    category=types.HarmCategory.HARM_CATEGORY_HARASSMENT,
+                    threshold=types.HarmBlockThreshold.OFF,
+                ),
+                types.SafetySetting(
+                    category=types.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+                    threshold=types.HarmBlockThreshold.OFF,
+                ),
+                types.SafetySetting(
+                    category=types.HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+                    threshold=types.HarmBlockThreshold.OFF,
+                ),
+            ]
+            
+            # 获取Gemini配置
+            gemini_config_data = None
+            if agent_manager:
+                gemini_config_data = agent_manager.get_preset_json("gemini_config.json")
+            
+            # 构建配置
+            generate_content_config = types.GenerateContentConfig(
+                temperature=gemini_config_data.get("temperature", 1.0) if gemini_config_data else 1.0,
+                top_p=gemini_config_data.get("top_p", 0.95) if gemini_config_data else 0.95,
+                top_k=gemini_config_data.get("top_k", 64) if gemini_config_data else 64,
+                max_output_tokens=gemini_config_data.get("max_output_tokens", 8192) if gemini_config_data else 8192,
+                safety_settings=safety_settings,
+                response_mime_type="text/plain",
+                system_instruction=[
+                    types.Part.from_text(text=preset_data.get("system_prompt", "")),
+                ],
             )
-            print("附件已添加到用户消息中")
-        
-        contents = [
-            types.Content(
-                role="user",
-                parts=user_parts,
-            ),
-            types.Content(
-                role="model",
-                parts=model_parts,
-            ),
-            types.Content(
-                role="user",
-                parts=last_user_parts,
-            ),
-        ]
-        
-        # 设置安全设置
-        safety_settings = [
-            types.SafetySetting(
-                category=types.HarmCategory.HARM_CATEGORY_CIVIC_INTEGRITY,
-                threshold=types.HarmBlockThreshold.OFF,
-            ),
-            types.SafetySetting(
-                category=types.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
-                threshold=types.HarmBlockThreshold.OFF,
-            ),
-            types.SafetySetting(
-                category=types.HarmCategory.HARM_CATEGORY_HARASSMENT,
-                threshold=types.HarmBlockThreshold.OFF,
-            ),
-            types.SafetySetting(
-                category=types.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
-                threshold=types.HarmBlockThreshold.OFF,
-            ),
-            types.SafetySetting(
-                category=types.HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-                threshold=types.HarmBlockThreshold.OFF,
-            ),
-        ]
-        
-        # 获取Gemini配置
-        gemini_config_data = None
-        if agent_manager:
-            gemini_config_data = agent_manager.get_preset_json("gemini_config.json", channel_id)
-        
-        # 构建配置
-        generate_content_config = types.GenerateContentConfig(
-            temperature=gemini_config_data.get("temperature", 1.0) if gemini_config_data else 1.0,
-            top_p=gemini_config_data.get("top_p", 0.95) if gemini_config_data else 0.95,
-            top_k=gemini_config_data.get("top_k", 64) if gemini_config_data else 64,
-            max_output_tokens=gemini_config_data.get("max_output_tokens", 8192) if gemini_config_data else 8192,
-            safety_settings=safety_settings,
-            response_mime_type="text/plain",
-            system_instruction=[
-                types.Part.from_text(text=preset_data.get("system_prompt", "")),
-            ],
-        )
+        else:
+            # 如果没有预设，使用原有的方式
+            if attachment_bytes:
+                # 使用inline_data方式添加附件
+                attachment_part = types.Part(
+                    inline_data=types.Blob(
+                        mime_type=attachment_mime_type,
+                        data=attachment_bytes
+                    )
+                )
+                contents = [prompt, attachment_part]
+            else:
+                contents = [prompt]
+            generate_content_config = model_config
         
         full = ""
         n = config.get("gemini_chunk_per_edit")
@@ -313,7 +300,17 @@ class Gemini(commands.Cog):
                 if generate_content_config.system_instruction:
                     system_instruction = generate_content_config.system_instruction[0].text if generate_content_config.system_instruction else "None"
             
-            # 只记录到日志文件，不再重复打印到控制台
+            # 直接打印到控制台
+            print("\n========== Gemini请求 ==========")
+            print(f"模型: {model}")
+            print(f"系统提示: {system_instruction}")
+            print("消息内容:")
+            for i, content in enumerate(log_contents):
+                print(f"[{i}] {content}")
+            print(f"配置: temperature={generate_content_config.temperature}, top_p={generate_content_config.top_p}, top_k={generate_content_config.top_k}, max_tokens={generate_content_config.max_output_tokens}")
+            print("================================\n")
+            
+            # 同时记录到日志文件
             logger.info(
                 "Gemini请求发送: 模型=%s, 内容=%s, 系统提示=%s, 配置=%s",
                 model,
@@ -364,8 +361,7 @@ class Gemini(commands.Cog):
         question: str,
         context_length: int = None,
     ):
-        channel_id = str(ctx.channel.id)
-        if channel_id not in self.chat_channels:
+        if ctx.channel.id != self.chat_channel_id:
             await ctx.send("抱歉，该命令只能在指定的聊天频道中使用", delete_after=5, ephemeral=True)
             return
         if context_length is None:
@@ -383,8 +379,9 @@ class Gemini(commands.Cog):
             if reference and reference.attachments:
                 extra_attachment = reference.attachments[-1]
         
-        # 选择合适的预设
+        # 检查是否需要使用预设
         agent_manager = self.bot.get_cog("AgentManager")
+        use_preset = False
         preset_name = "chat_preset.json"  # 默认使用chat_preset.json
         
         if agent_manager:
@@ -394,6 +391,30 @@ class Gemini(commands.Cog):
                     preset_name = "attachment_preset.json"
                 else:
                     preset_name = "reference_preset.json"
+            
+            preset_data = agent_manager.get_preset_json(preset_name)
+            if preset_data:
+                use_preset = True
+        
+        # 根据情况创建提示
+        if use_preset:
+            prompt = question
+        else:
+            # 否则使用传统的处理方式
+            if ctx.message.reference is None:
+                prompt = await self.context_prompter.chat_prompt(
+                    ctx, context_length, question
+                )
+            else:
+                reference = ctx.message.reference.resolved
+                if reference.attachments:
+                    prompt = await self.context_prompter.chat_prompt_with_attachment(
+                        ctx, question, reference
+                    )
+                else:
+                    prompt = await self.context_prompter.chat_prompt_with_reference(
+                        ctx, context_length, 5, question, reference
+                    )
         
         # 检查附件是否存在，确保传递正确
         if extra_attachment:
@@ -402,19 +423,18 @@ class Gemini(commands.Cog):
         # 发送请求
         await self.request_gemini(
             ctx,
-            question,  # 直接传递原始问题，预设处理在request_gemini中完成
+            prompt,
             extra_attachment=extra_attachment,
         )
 
-    @commands.hybrid_command(name="tr", description="Translate a text.")
+    @commands.hybrid_command(name="translate", description="Translate a text.")
     async def translate(
         self,
         ctx: commands.Context,
         target_language: str = None,
         context_length: int = None,
     ):
-        channel_id = str(ctx.channel.id)
-        if channel_id not in self.chat_channels:
+        if ctx.message.channel.id != self.chat_channel_id:
             await ctx.send("抱歉，该命令只能在指定的聊天频道中使用", delete_after=5, ephemeral=True)
             return
         if ctx.message.reference is None:
@@ -431,33 +451,14 @@ class Gemini(commands.Cog):
         agent_manager = self.bot.get_cog("AgentManager")
         preset_data = None
         
+        # 获取预设内容
+        if agent_manager:
+            preset_data = agent_manager.get_preset_json("translate_preset.json")
+        
         # 获取被回复的消息
         reference_message = await ctx.channel.fetch_message(
             ctx.message.reference.message_id
         )
-        
-        # 检查是否有附件
-        extra_attachment = None
-        if reference_message and reference_message.attachments:
-            extra_attachment = reference_message.attachments[-1]
-            print(f"翻译附件: {extra_attachment.filename} ({extra_attachment.content_type})")
-        
-        # 下载附件内容
-        attachment_bytes = None
-        attachment_mime_type = None
-        if extra_attachment:
-            msg = await ctx.send("Downloading the attachment...")
-            bytes_data = await extra_attachment.read()
-            attachment_bytes = bytes_data
-            attachment_mime_type = extra_attachment.content_type.split(";")[0]
-            await msg.edit(content="Processing the attachment...")
-            print(f"附件已下载: {extra_attachment.filename} ({attachment_mime_type})")
-        else:
-            msg = await ctx.send("Translating...")
-        
-        # 获取预设内容
-        if agent_manager:
-            preset_data = agent_manager.get_preset_json("translate_preset.json")
         
         if preset_data:
             # 使用预设JSON结构和原始文本
@@ -553,29 +554,6 @@ class Gemini(commands.Cog):
                 ),
             ]
             
-            # 如果有附件，添加到最后一个用户消息中
-            if attachment_bytes:
-                # 使用Pillow和inline_data方式添加图片
-                image_bytes = BytesIO(attachment_bytes)
-                image = PIL.Image.open(image_bytes)
-                
-                # 转换为字节数据
-                mime_type = attachment_mime_type or "image/jpeg"
-                img_byte_arr = BytesIO()
-                image.save(img_byte_arr, format=image.format or "JPEG")
-                img_byte_data = img_byte_arr.getvalue()
-                
-                # 添加到消息中
-                contents[2].parts.append(
-                    types.Part(
-                        inline_data=types.Blob(
-                            mime_type=mime_type,
-                            data=img_byte_data
-                        )
-                    )
-                )
-                print("附件已添加到翻译请求中")
-            
             # 设置安全设置
             safety_settings = [
                 types.SafetySetting(
@@ -603,7 +581,7 @@ class Gemini(commands.Cog):
             # 获取Gemini配置
             gemini_config_data = None
             if agent_manager:
-                gemini_config_data = agent_manager.get_preset_json("gemini_config.json", channel_id)
+                gemini_config_data = agent_manager.get_preset_json("gemini_config.json")
             
             # 构建配置
             generate_content_config = types.GenerateContentConfig(
@@ -618,11 +596,7 @@ class Gemini(commands.Cog):
                 ],
             )
             
-            # 使用已经存在的msg变量，而不是创建新消息
-            # 如果之前没有创建消息（例如没有附件），现在才创建
-            if 'msg' not in locals() or msg is None:
-                msg = await ctx.send("Translating...")
-                
+            msg = await ctx.send("Translating...")
             full = ""
             n = config.get("gemini_chunk_per_edit")
             every_n_chunk = 1
@@ -644,7 +618,17 @@ class Gemini(commands.Cog):
                     if generate_content_config.system_instruction:
                         system_instruction = generate_content_config.system_instruction[0].text if generate_content_config.system_instruction else "None"
                 
-                # 只记录到日志文件，不再重复打印到控制台
+                # 直接打印到控制台
+                print("\n========== Gemini翻译请求 ==========")
+                print(f"模型: gemini-2.0-pro-exp-02-05")
+                print(f"系统提示: {system_instruction}")
+                print("消息内容:")
+                for i, content in enumerate(log_contents):
+                    print(f"[{i}] {content}")
+                print(f"配置: temperature={generate_content_config.temperature}, top_p={generate_content_config.top_p}, top_k={generate_content_config.top_k}, max_tokens={generate_content_config.max_output_tokens}")
+                print("====================================\n")
+                
+                # 同时记录到日志文件
                 logger.info(
                     "Gemini翻译请求发送: 模型=gemini-2.0-pro-exp-02-05, 内容=%s, 系统提示=%s, 配置=%s",
                     log_contents,
@@ -684,8 +668,11 @@ class Gemini(commands.Cog):
                     full += "\nUh oh, something went wrong..."
                     await msg.edit(content=full)
         else:
-            # 预设数据不存在，显示错误信息
-            await ctx.send("无法加载翻译预设，请联系管理员", delete_after=5, ephemeral=True)
+            # 使用原有方式
+            prompt = await self.context_prompter.translate_prompt(
+                ctx, context_length, target_language
+            )
+            await self.request_gemini(ctx, prompt)
 
     @commands.hybrid_command(
         name="set_context_length", description="Set the context length."

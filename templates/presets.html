@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>预设管理 - Discord 机器人管理</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cropperjs@1.6.1/dist/cropper.min.css">
+</head>
+<body>
+    <div class="container">
+        <nav class="navbar navbar-expand-lg navbar-light bg-light mb-4">
+            <div class="container-fluid">
+                <a class="navbar-brand" href="/">Discord 机器人管理</a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav">
+                        <li class="nav-item">
+                            <a class="nav-link" href="/">首页</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/config">配置设置</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link active" href="/presets">预设管理</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+
+        <div class="row">
+            <!-- 预设列表 -->
+            <div class="col-md-4 mb-4">
+                <div class="card shadow h-100">
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">预设列表</h5>
+                        <button class="btn btn-sm btn-light" id="addNewPresetBtn">
+                            <i class="bi bi-plus-lg"></i> 新增
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div class="list-group" id="presetsListGroup">
+                            {% for preset in presets %}
+                            <button type="button" class="list-group-item list-group-item-action preset-item" data-preset="{{ preset }}">
+                                <div class="d-flex align-items-center">
+                                    <div class="preset-avatar me-3">
+                                        <img src="/static/img/default-avatar.png" alt="{{ preset }}" class="rounded-circle" width="40" height="40" id="avatar-{{ preset }}">
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0">{{ preset }}</h6>
+                                    </div>
+                                </div>
+                            </button>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 预设编辑区 -->
+            <div class="col-md-8 mb-4">
+                <div class="card shadow h-100">
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0" id="presetNameHeader">请选择预设</h5>
+                        <div>
+                            <button class="btn btn-sm btn-danger me-2" id="deletePresetBtn" style="display: none;">
+                                <i class="bi bi-trash"></i> 删除
+                            </button>
+                            <button class="btn btn-sm btn-success" id="savePresetBtn" style="display: none;">
+                                <i class="bi bi-save"></i> 保存
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div id="presetEditorContainer" style="display: none;">
+                            <div class="row mb-4">
+                                <div class="col-md-3 text-center">
+                                    <div class="position-relative mb-3" style="width: 150px; height: 150px; margin: 0 auto;">
+                                        <img src="/static/img/default-avatar.png" alt="预设头像" class="img-fluid rounded-circle" id="presetAvatar" style="width: 150px; height: 150px; object-fit: cover;">
+                                        <button class="btn btn-sm btn-primary position-absolute bottom-0 end-0" id="changeAvatarBtn">
+                                            <i class="bi bi-camera"></i>
+                                        </button>
+                                    </div>
+                                    <input type="file" id="avatarFileInput" accept="image/*" style="display: none;">
+                                </div>
+                                <div class="col-md-9">
+                                    <ul class="nav nav-tabs" id="presetTabs" role="tablist">
+                                        <li class="nav-item" role="presentation">
+                                            <button class="nav-link active" id="chat-tab" data-bs-toggle="tab" data-bs-target="#chat-tab-pane" type="button" role="tab">聊天设置</button>
+                                        </li>
+                                        <li class="nav-item" role="presentation">
+                                            <button class="nav-link" id="translate-tab" data-bs-toggle="tab" data-bs-target="#translate-tab-pane" type="button" role="tab">翻译设置</button>
+                                        </li>
+                                        <li class="nav-item" role="presentation">
+                                            <button class="nav-link" id="attachment-tab" data-bs-toggle="tab" data-bs-target="#attachment-tab-pane" type="button" role="tab">附件设置</button>
+                                        </li>
+                                        <li class="nav-item" role="presentation">
+                                            <button class="nav-link" id="reference-tab" data-bs-toggle="tab" data-bs-target="#reference-tab-pane" type="button" role="tab">引用设置</button>
+                                        </li>
+                                        <li class="nav-item" role="presentation">
+                                            <button class="nav-link" id="model-tab" data-bs-toggle="tab" data-bs-target="#model-tab-pane" type="button" role="tab">模型设置</button>
+                                        </li>
+                                    </ul>
+                                    <div class="tab-content p-3 border border-top-0 rounded-bottom" id="presetTabContent">
+                                        <!-- 聊天设置 -->
+                                        <div class="tab-pane fade show active" id="chat-tab-pane" role="tabpanel" aria-labelledby="chat-tab">
+                                            <form id="chatPresetForm">
+                                                <div class="mb-3">
+                                                    <label for="chat_system_prompt" class="form-label">系统提示词</label>
+                                                    <textarea class="form-control" id="chat_system_prompt" rows="2"></textarea>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label for="chat_first_user_message" class="form-label">第一条用户消息</label>
+                                                    <input type="text" class="form-control" id="chat_first_user_message">
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label for="chat_main_content" class="form-label">主要内容</label>
+                                                    <textarea class="form-control" id="chat_main_content" rows="10"></textarea>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label for="chat_last_user_message" class="form-label">最后一条用户消息</label>
+                                                    <input type="text" class="form-control" id="chat_last_user_message">
+                                                </div>
+                                            </form>
+                                        </div>
+                                        
+                                        <!-- 翻译设置 -->
+                                        <div class="tab-pane fade" id="translate-tab-pane" role="tabpanel" aria-labelledby="translate-tab">
+                                            <form id="translatePresetForm">
+                                                <div class="mb-3">
+                                                    <label for="translate_system_prompt" class="form-label">系统提示词</label>
+                                                    <textarea class="form-control" id="translate_system_prompt" rows="2"></textarea>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label for="translate_first_user_message" class="form-label">第一条用户消息</label>
+                                                    <input type="text" class="form-control" id="translate_first_user_message">
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label for="translate_main_content" class="form-label">主要内容</label>
+                                                    <textarea class="form-control" id="translate_main_content" rows="10"></textarea>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label for="translate_last_user_message" class="form-label">最后一条用户消息</label>
+                                                    <input type="text" class="form-control" id="translate_last_user_message">
+                                                </div>
+                                            </form>
+                                        </div>
+                                        
+                                        <!-- 附件设置 -->
+                                        <div class="tab-pane fade" id="attachment-tab-pane" role="tabpanel" aria-labelledby="attachment-tab">
+                                            <form id="attachmentPresetForm">
+                                                <div class="mb-3">
+                                                    <label for="attachment_system_prompt" class="form-label">系统提示词</label>
+                                                    <textarea class="form-control" id="attachment_system_prompt" rows="2"></textarea>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label for="attachment_first_user_message" class="form-label">第一条用户消息</label>
+                                                    <input type="text" class="form-control" id="attachment_first_user_message">
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label for="attachment_main_content" class="form-label">主要内容</label>
+                                                    <textarea class="form-control" id="attachment_main_content" rows="10"></textarea>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label for="attachment_last_user_message" class="form-label">最后一条用户消息</label>
+                                                    <input type="text" class="form-control" id="attachment_last_user_message">
+                                                </div>
+                                            </form>
+                                        </div>
+                                        
+                                        <!-- 引用设置 -->
+                                        <div class="tab-pane fade" id="reference-tab-pane" role="tabpanel" aria-labelledby="reference-tab">
+                                            <form id="referencePresetForm">
+                                                <div class="mb-3">
+                                                    <label for="reference_system_prompt" class="form-label">系统提示词</label>
+                                                    <textarea class="form-control" id="reference_system_prompt" rows="2"></textarea>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label for="reference_first_user_message" class="form-label">第一条用户消息</label>
+                                                    <input type="text" class="form-control" id="reference_first_user_message">
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label for="reference_main_content" class="form-label">主要内容</label>
+                                                    <textarea class="form-control" id="reference_main_content" rows="10"></textarea>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label for="reference_last_user_message" class="form-label">最后一条用户消息</label>
+                                                    <input type="text" class="form-control" id="reference_last_user_message">
+                                                </div>
+                                            </form>
+                                        </div>
+                                        
+                                        <!-- 模型设置 -->
+                                        <div class="tab-pane fade" id="model-tab-pane" role="tabpanel" aria-labelledby="model-tab">
+                                            <ul class="nav nav-pills mb-3" id="modelSettingsTabs" role="tablist">
+                                                <li class="nav-item" role="presentation">
+                                                    <button class="nav-link active" id="gemini-config-tab" data-bs-toggle="pill" data-bs-target="#gemini-config-pane" type="button" role="tab">Gemini 设置</button>
+                                                </li>
+                                                <li class="nav-item" role="presentation">
+                                                    <button class="nav-link" id="openai-config-tab" data-bs-toggle="pill" data-bs-target="#openai-config-pane" type="button" role="tab">OpenAI 设置</button>
+                                                </li>
+                                            </ul>
+                                            <div class="tab-content" id="modelSettingsContent">
+                                                <!-- Gemini 配置 -->
+                                                <div class="tab-pane fade show active" id="gemini-config-pane" role="tabpanel" aria-labelledby="gemini-config-tab">
+                                                    <form id="geminiConfigForm">
+                                                        <div class="mb-3">
+                                                            <label for="gemini_system_instruction" class="form-label">系统指令</label>
+                                                            <textarea class="form-control" id="gemini_system_instruction" rows="3"></textarea>
+                                                        </div>
+                                                        <div class="row g-3">
+                                                            <div class="col-md-4">
+                                                                <label for="gemini_top_k" class="form-label">Top K</label>
+                                                                <input type="number" class="form-control" id="gemini_top_k" min="1" max="100">
+                                                            </div>
+                                                            <div class="col-md-4">
+                                                                <label for="gemini_top_p" class="form-label">Top P</label>
+                                                                <input type="number" class="form-control" id="gemini_top_p" min="0" max="1" step="0.01">
+                                                            </div>
+                                                            <div class="col-md-4">
+                                                                <label for="gemini_temperature" class="form-label">温度</label>
+                                                                <input type="number" class="form-control" id="gemini_temperature" min="0" max="2" step="0.01">
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        <div class="mt-4">
+                                                            <label class="form-label">安全设置</label>
+                                                            <div class="table-responsive">
+                                                                <table class="table table-bordered">
+                                                                    <thead>
+                                                                        <tr>
+                                                                            <th>类别</th>
+                                                                            <th>阈值</th>
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody id="safetySettingsTable">
+                                                                        <!-- 安全设置会动态添加 -->
+                                                                    </tbody>
+                                                                </table>
+                                                            </div>
+                                                        </div>
+                                                    </form>
+                                                </div>
+                                                
+                                                <!-- OpenAI 配置 -->
+                                                <div class="tab-pane fade" id="openai-config-pane" role="tabpanel" aria-labelledby="openai-config-tab">
+                                                    <form id="openaiConfigForm">
+                                                        <!-- OpenAI 配置表单 -->
+                                                        <div class="alert alert-info">
+                                                            此处可以添加 OpenAI 特定的配置设置
+                                                        </div>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="presetPlaceholder" class="text-center py-5">
+                            <i class="bi bi-arrow-left-circle" style="font-size: 3rem; color: #ccc;"></i>
+                            <h5 class="mt-3 text-muted">请从左侧列表选择一个预设</h5>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 新预设模态框 -->
+        <div class="modal fade" id="newPresetModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">创建新预设</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="newPresetName" class="form-label">预设名称</label>
+                            <input type="text" class="form-control" id="newPresetName" placeholder="输入预设名称">
+                        </div>
+                        <div class="mb-3">
+                            <label for="templatePreset" class="form-label">基于模板</label>
+                            <select class="form-select" id="templatePreset">
+                                {% for preset in presets %}
+                                <option value="{{ preset }}">{{ preset }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                        <button type="button" class="btn btn-primary" id="createPresetBtn">创建</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 删除确认模态框 -->
+        <div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">确认删除</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>确定要删除预设 <span id="deletePresetName" class="fw-bold"></span> 吗？此操作不可撤销。</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                        <button type="button" class="btn btn-danger" id="confirmDeleteBtn">删除</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 图片裁剪模态框 -->
+        <div class="modal fade" id="imageCropperModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">裁剪头像</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="img-container">
+                            <img id="cropperImage" src="" alt="待裁剪图片" style="max-width: 100%;">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                        <button type="button" class="btn btn-primary" id="cropImageBtn">裁剪并保存</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 保存成功提示 -->
+        <div class="toast-container position-fixed top-0 end-0 p-3">
+            <div id="saveToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+                <div class="toast-header bg-success text-white">
+                    <i class="bi bi-check-circle me-2"></i>
+                    <strong class="me-auto">成功</strong>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+                <div class="toast-body" id="toastMessage">
+                    操作成功！
+                </div>
+            </div>
+        </div>
+
+        <footer class="py-4 text-center text-muted">
+            <p>© 2024 Discord 机器人管理</p>
+        </footer>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsoneditor@9.10.2/dist/jsoneditor.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/cropperjs@1.6.1/dist/cropper.min.js"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/presets.js') }}"></script>
+</body>
+</html> 

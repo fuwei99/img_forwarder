@@ -173,3 +173,87 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+# 配置文件和密钥
+config.json
+*.key
+*.pem
+*.env
+.env
+secrets.json
+
+# Discord 令牌和API密钥
+token.txt
+*_key.txt
+*_token.txt
+gemini_keys.txt
+openai_key.txt
+
+# 缓存目录和文件
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+.hypothesis/
+.coverage
+.coverage.*
+
+# 虚拟环境
+venv/
+env/
+ENV/
+.venv/
+.virtualenv/
+
+# 日志文件
+*.log
+logs/
+npm-debug.log*
+
+# 临时文件
+*.tmp
+*.bak
+*.swp
+*~
+temp/
+tmp/
+
+# 操作系统生成的文件
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# IDE和编辑器文件
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+.project
+.classpath
+.settings/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# 用户上传的内容和缓存
+uploads/
+cache/
+agent/
+
+# 数据库文件
+*.sqlite
+*.sqlite3
+*.db
+
+# 忽略预设文件
+presets/*
+!presets/default/
+!presets/anon/

@@ -18,63 +18,72 @@ class Openai(commands.Cog):
         self.endpoint = config.get("openai_endpoint")
         self.models: dict[str, str] = config.get("openai_models")
         self.context_prompter = ContextPrompter()
-        self.chat_channel_id = config.get("chat_channel_id")
+        
+        # 确保chat_channels中的键全部为字符串
+        self.update_chat_channels()
+        
         self.model = list(self.models.keys())[0]
         self.context_length = 20
 
-    async def request_openai(self, model: str, prompt: str, username: str) -> str:
+    def update_chat_channels(self):
+        """更新聊天频道配置"""
+        chat_channels = config.get("chat_channels", {})
+        self.chat_channels = {str(channel_id): settings for channel_id, settings in chat_channels.items()}
+        print(f"OpenAI cog 已更新频道配置: {list(self.chat_channels.keys())}")
+
+    async def request_openai(self, model: str, prompt: str, username: str, channel_id=None) -> str:
         url = f"{self.endpoint}/chat/completions"
         headers = {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {self.key}",
         }
+        
+        # 尝试从Agent Manager获取配置
+        openai_config = {}
+        if hasattr(self.bot, "get_cog"):
+            agent_manager = self.bot.get_cog("AgentManager")
+            if agent_manager:
+                config_from_preset = agent_manager.get_preset_json("openai_config.json", channel_id)
+                if config_from_preset:
+                    openai_config = config_from_preset
+        
         data = {
             "model": self.models[model]["id"],
             "messages": [
                 {"role": "user", "content": prompt},
             ],
-            "top_p": 0.95,
-            "tok_k": 55,
-            "temperature": 1.0,
+            "top_p": openai_config.get("top_p", 0.95),
+            "top_k": openai_config.get("top_k", 55),
+            "temperature": openai_config.get("temperature", 1.0),
             "stream": True,
         }
         msg = await self.webhook.send("Typing...", username=username, wait=True)
         full = ""
         every_n_chunk = 1
         n = self.models[model]["chunk_per_edit"]
-        try:
-            async with ClientSession() as session:
-                async with session.post(url, json=data, headers=headers) as response:
-                    async for line in response.content:
-                        line = line.decode("utf-8").strip()
-                        if line:
-                            line = line.removeprefix("data:").strip()
-                            data = json.loads(line)
-                            choices = data.get("choices")
-                            if choices:
-                                delta = choices[0].get("delta").get("content")
-                                if delta:
-                                    full += delta
-                                    if every_n_chunk == n:
-                                        await msg.edit(content=full)
-                                        every_n_chunk = 1
-                                    else:
-                                        every_n_chunk += 1
-                                if choices[0].get("finish_reason"):
-                                    break
-            await msg.edit(content=full)
-        except Exception as e:
-            logger.error(
-                "Error when requesting openai model: %s, error: %s",
-                model,
-                e,
-                exc_info=True,
-            )
-            if full == "":
-                await msg.edit(content="Uh oh, something went wrong...")
-            else:
-                full += "\nUh oh, something went wrong..."
-                await msg.edit(content=full)
+        async with ClientSession() as session:
+            async with session.post(url, headers=headers, json=data) as resp:
+                resp.raise_for_status()
+                async for line in resp.content:
+                    if not line:
+                        continue
+                    sline = line.decode("utf-8").strip()
+                    if sline == "data: [DONE]":
+                        break
+                    if not sline.startswith("data: "):
+                        continue
+                    try:
+                        ss = sline[6:]
+                        data = json.loads(ss)
+                        dt = data["choices"][0]["delta"].get("content", "")
+                        full += dt
+                        if (every_n_chunk % n) == 0:
+                            await msg.edit(content=full)
+                        every_n_chunk += 1
+                    except Exception as e:
+                        logger.error(e)
+        await msg.edit(content=full)
+        return full
 
     @commands.hybrid_command(name="yo", description="Chat with OpenAI models.")
     async def yo(
@@ -85,8 +94,9 @@ class Openai(commands.Cog):
         question: str,
         context_length: int = None,
     ):
-        if ctx.channel.id != self.chat_channel_id:
-            await ctx.send("I apologize, but……", delete_after=5, ephemeral=True)
+        channel_id = ctx.channel.id
+        if str(channel_id) not in self.chat_channels:
+            await ctx.send("抱歉，该命令只能在指定的聊天频道中使用", delete_after=5, ephemeral=True)
             return
         if context_length is None:
             context_length = self.context_length
@@ -100,7 +110,7 @@ class Openai(commands.Cog):
             prompt = await self.context_prompter.chat_prompt_with_reference(
                 ctx, context_length, 5, question, message, name=username
             )
-        await self.request_openai(model, prompt, username)
+        await self.request_openai(model, prompt, username, channel_id)
 
     @commands.hybrid_command(name="yoo", description="Chat with default OpenAI model.")
     async def yoo(
@@ -152,9 +162,18 @@ class Openai(commands.Cog):
             await ctx.send(f"Invalid timezone.", ephemeral=True, delete_after=5)
 
 
-async def setup(bot):
-    webhook = discord.Webhook.from_url(
-        config.get("webhook_url"), session=ClientSession()
-    )
-    await bot.add_cog(Openai(bot, webhook))
-    print(cpr.success("Cog loaded: Openai"))
+async def setup(bot: commands.Bot):
+    openai_key = config.get("openai_key", "")
+    if not openai_key or openai_key == "YOUR_OPENAI_API_KEY":
+        print(cpr.warning("OpenAI API key not set, skipping OpenAI setup"))
+        return
+
+    webhook_url = config.get("webhook_url")
+    if not webhook_url:
+        print(cpr.error("Webhook URL not set, cannot setup OpenAI"))
+        return
+
+    async with ClientSession() as session:
+        webhook = discord.Webhook.from_url(webhook_url, session=session)
+        await bot.add_cog(Openai(bot, webhook))
+        print(cpr.success("Cog loaded: Openai"))

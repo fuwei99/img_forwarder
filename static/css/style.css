@@ -1,0 +1,157 @@
+/* 全局样式 */
+body {
+    background-color: #f8f9fa;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* 导航栏品牌名称 */
+.navbar-brand {
+    font-weight: 600;
+}
+
+/* 卡片悬停效果 */
+.hover-card {
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.hover-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* 预设列表样式 */
+.preset-item {
+    border-left: 3px solid transparent;
+    transition: all 0.2s;
+}
+
+.preset-item:hover {
+    border-left-color: #0d6efd;
+}
+
+.preset-item.active {
+    border-left-color: #0d6efd;
+    background-color: rgba(13, 110, 253, 0.1);
+}
+
+/* 表单元素增强 */
+.form-control:focus, .form-select:focus {
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    border-color: #86b7fe;
+}
+
+textarea.form-control {
+    resize: vertical;
+    min-height: 80px;
+}
+
+/* 头像上传按钮 */
+#changeAvatarBtn {
+    transition: opacity 0.3s;
+    opacity: 0.7;
+}
+
+#changeAvatarBtn:hover {
+    opacity: 1;
+}
+
+/* Cropper样式 */
+.img-container {
+    max-height: 500px;
+    margin-bottom: 20px;
+}
+
+/* Tab内容区域 */
+.tab-content {
+    min-height: 400px;
+}
+
+/* 导航标签样式增强 */
+.nav-tabs .nav-link {
+    color: #495057;
+    border-radius: 0;
+    padding: 0.75rem 1rem;
+}
+
+.nav-tabs .nav-link.active {
+    font-weight: 600;
+    border-bottom: 3px solid #0d6efd;
+}
+
+.nav-pills .nav-link.active {
+    background-color: #0d6efd;
+}
+
+/* 预设编辑器标题 */
+.preset-file-title {
+    font-size: 0.9rem;
+    color: #6c757d;
+    margin-bottom: 0.5rem;
+}
+
+/* 按钮动画 */
+.btn {
+    transition: all 0.2s;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+}
+
+/* 聊天频道卡片样式 */
+.chat-channel-item {
+    transition: all 0.2s;
+    border-left: 3px solid transparent;
+}
+
+.chat-channel-item:hover {
+    border-left-color: #0d6efd;
+    background-color: rgba(13, 110, 253, 0.05);
+}
+
+/* 表格样式增强 */
+.table {
+    border-color: #dee2e6;
+}
+
+.table thead th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+}
+
+/* 自定义滚动条 */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* 响应式调整 */
+@media (max-width: 767.98px) {
+    .preset-item .preset-avatar img {
+        width: 32px;
+        height: 32px;
+    }
+    
+    .card-header h5 {
+        font-size: 1rem;
+    }
+    
+    .btn-sm {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.75rem;
+    }
+} 

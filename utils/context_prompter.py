@@ -7,6 +7,10 @@ from utils.func import get_time, now
 class ContextPrompter:
     def __init__(self):
         self.tz = pytz.timezone("Asia/Shanghai")
+        self.agent_manager = None
+
+    def set_agent_manager(self, agent_manager):
+        self.agent_manager = agent_manager
 
     def set_tz(self, tz: str):
         try:
@@ -69,6 +73,14 @@ class ContextPrompter:
             context_msg.reverse()
         return "\n".join(context_msg)
 
+    def _get_template(self, template_name, channel_id=None):
+        """获取模板内容"""
+        if self.agent_manager:
+            return self.agent_manager.get_preset_file(template_name, channel_id)
+        else:
+            # 如果没有设置agent_manager，返回默认模板
+            return None
+
     async def chat_prompt(
         self,
         ctx: commands.Context,
@@ -78,6 +90,21 @@ class ContextPrompter:
     ):
         context = await self.get_context_for_prompt(ctx, context_length)
         name = name if name else ctx.me.display_name
+        
+        # 使用模板，传递频道ID
+        template = self._get_template("chat_prompt.txt", ctx.channel.id)
+        if template:
+            return template.format(
+                context=context,
+                question=question,
+                name=name,
+                bot_name=ctx.me.name,
+                current_time=now(tz=self.tz),
+                user_display_name=ctx.author.display_name,
+                user_name=ctx.author.name
+            )
+        
+        # 回退到原始模板
         prompt = f"""
         <context>
         {context}
@@ -105,13 +132,28 @@ class ContextPrompter:
         name: str = None,
     ):
         context = await self.get_context_for_prompt(
-            ctx,
-            context_length,
-            before_message=reference,
-            after_message=reference,
-            after_message_context_length=after_message_context_length,
+            ctx, context_length, reference, after_message_context_length=after_message_context_length
         )
         name = name if name else ctx.me.display_name
+        
+        # 使用模板
+        template = self._get_template("chat_prompt_with_reference.txt", ctx.channel.id)
+        if template:
+            return template.format(
+                context=context,
+                question=question,
+                name=name,
+                bot_name=ctx.me.name,
+                current_time=now(tz=self.tz),
+                user_display_name=ctx.author.display_name,
+                user_name=ctx.author.name,
+                reference_user_display_name=reference.author.display_name,
+                reference_user_name=reference.author.name,
+                reference_time=self.get_msg_time(reference),
+                reference_content=reference.content
+            )
+        
+        # 回退到原始模板
         prompt = f"""
         <context>
         {context}
@@ -141,12 +183,30 @@ class ContextPrompter:
         content = reference.content
         if content == "":
             content = "[No content, only attachments]"
+            
+        # 使用模板
+        template = self._get_template("chat_prompt_with_attachment.txt", ctx.channel.id)
+        if template:
+            return template.format(
+                question=question,
+                name=ctx.me.display_name,
+                bot_name=ctx.me.name,
+                current_time=now(tz=self.tz),
+                user_display_name=ctx.author.display_name,
+                user_name=ctx.author.name,
+                reference_user_display_name=reference.author.display_name,
+                reference_user_name=reference.author.name,
+                reference_time=self.get_msg_time(reference),
+                reference_content=content
+            )
+            
+        # 回退到原始模板
         prompt: str = f"""
         <question>
         {question}
         </question>
         <reference>
-        {reference.author.display_name} ({reference.author.name}) ({self.get_msg_time(reference)}): {reference.content}
+        {reference.author.display_name} ({reference.author.name}) ({self.get_msg_time(reference)}): {content}
         </reference>
         You are {ctx.me.display_name} ({ctx.me.name}), chatting in a discord server.
         Speak naturally like a human who talks, and don't use phrases like 'according to the context' since humans never talk like that. Remember the Language is Chinese unless the user specifies otherwise! Avoid explicitly mentioning someone's name. If you have to mention someone (try to avoid this case), use their display name (the name that appears outside the parentheses).
@@ -166,13 +226,28 @@ class ContextPrompter:
         after_message_context_length: int,
         target_language: str,
     ):
+        # 获取上下文内容
         context = await self.get_context_for_prompt(
-            ctx,
-            context_length,
-            after_message=reference,
-            after_message_context_length=after_message_context_length,
+            ctx, context_length, reference, after_message_context_length=after_message_context_length
         )
+        
+        # 使用模板
+        template = self._get_template("translate_prompt.txt", ctx.channel.id)
+        if template:
+            return template.format(
+                context=context,
+                target_language=target_language,
+                reference_content=reference.content,
+                bot_name=ctx.me.name,
+                current_time=now(tz=self.tz),
+                user_display_name=ctx.author.display_name,
+                user_name=ctx.author.name,
+                reference_user_display_name=reference.author.display_name,
+                reference_user_name=reference.author.name,
+                reference_time=self.get_msg_time(reference)
+            )
 
+        # 回退到原始模板
         prompt = f"""
         <context>
         {context}

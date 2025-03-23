@@ -8,8 +8,8 @@ class Config:
         self._config = {}
         self.reload()
 
-    def get(self, key: str):
-        return self._config.get(key)
+    def get(self, key: str, default=None):
+        return self._config.get(key, default)
 
     def write(self, key: str, value):
         self._config[key] = value
