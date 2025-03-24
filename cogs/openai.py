@@ -3,7 +3,7 @@ from discord.ext import commands
 import discord
 from aiohttp import ClientSession
 import asyncio
-import base64
+import os
 
 from utils.color_printer import cpr
 from utils.config import config
@@ -24,7 +24,12 @@ class Openai(commands.Cog):
         # 确保chat_channels中的键全部为字符串
         self.update_chat_channels()
         
-        self.model = list(self.models.keys())[0]
+        # 从配置文件读取默认模型，如果没有则使用第一个模型
+        self.model = config.get("default_openai_model")
+        if not self.model or self.model not in self.models:
+            self.model = list(self.models.keys())[0]
+            config.write("default_openai_model", self.model)
+        
         self.context_length = 20
 
     async def cog_load(self):
@@ -38,46 +43,27 @@ class Openai(commands.Cog):
         agent_manager = self.bot.get_cog("AgentManager")
         if agent_manager:
             self.context_prompter.set_agent_manager(agent_manager)
+            print(f"OpenAI cog: AgentManager 已设置到 ContextPrompter")
 
     def update_chat_channels(self):
         """更新聊天频道配置"""
-        # 获取所有服务器的聊天频道配置
-        self.chat_channels = {}
-        servers_config = config.get_all_servers()
-        
-        for server_id, server_config in servers_config.items():
-            if "chat_channels" in server_config:
-                # 将每个服务器的聊天频道合并到总的字典中
-                for channel_id, channel_config in server_config["chat_channels"].items():
-                    self.chat_channels[str(channel_id)] = {
-                        "preset": channel_config.get("preset", "default"),
-                        "server_id": server_id  # 记录该频道属于哪个服务器
-                    }
-        
-        # 向后兼容：如果存在老版本的频道配置，也添加到频道列表中
-        chat_channels = config.get("chat_channels", {})
-        if chat_channels:
-            for channel_id, channel_config in chat_channels.items():
-                if channel_id not in self.chat_channels:
-                    self.chat_channels[str(channel_id)] = {
-                        "preset": channel_config.get("preset", "default"),
-                        "server_id": "server_1"  # 假定属于server_1
-                    }
+        # 获取所有服务器配置
+        self.servers = config.get("servers", {})
+        print(f"OpenAI cog 已更新服务器配置")
+    
+    def get_channel_config(self, guild_id: str, channel_id: str):
+        """获取频道配置"""
+        server_name, server_config = config.get_server_config(guild_id)
+        if not server_config:
+            return None
+        return server_config.get("chat_channels", {}).get(channel_id)
 
-    async def request_openai(self, model: str, prompt: str, username: str, channel_id=None) -> str:
+    async def request_openai(self, model: str, prompt: str, username: str, guild_id=None, channel_id=None) -> str:
         url = f"{self.endpoint}/chat/completions"
         headers = {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {self.key}",
         }
-        
-        # 尝试获取频道所属的guild_id
-        guild_id = None
-        if channel_id and channel_id in self.chat_channels:
-            # 查找频道对应的Discord频道以获取guild_id
-            channel = self.bot.get_channel(int(channel_id))
-            if channel and hasattr(channel, 'guild'):
-                guild_id = channel.guild.id
         
         # 尝试从Agent Manager获取配置
         openai_config = {}
@@ -141,18 +127,25 @@ class Openai(commands.Cog):
         # 记录API请求数据
         logger.info(f"OpenAI API 请求数据: {json.dumps(data, ensure_ascii=False, indent=2)}")
         
-        # 创建新的ClientSession用于API请求
-        async with ClientSession() as session:
-            # 使用会话进行API请求
-            async with session.post(url, headers=headers, json=data) as resp:
-                resp.raise_for_status()
-                response_data = await resp.json()
-                
-                # 从响应中提取回复内容
-                if "choices" in response_data and len(response_data["choices"]) > 0:
-                    return response_data["choices"][0]["message"]["content"]
-                else:
-                    raise ValueError("API返回的响应格式不正确")
+        try:
+            # 创建新的ClientSession用于API请求
+            async with ClientSession() as session:
+                # 使用会话进行API请求
+                async with session.post(url, headers=headers, json=data) as resp:
+                    resp.raise_for_status()
+                    response_data = await resp.json()
+                    
+                    # 从响应中提取回复内容
+                    if "choices" in response_data and len(response_data["choices"]) > 0:
+                        content = response_data["choices"][0]["message"]["content"]
+                        if not content or content.strip() == "":
+                            raise ValueError("API返回了空响应")
+                        return content
+                    else:
+                        raise ValueError("API返回的响应格式不正确")
+        except Exception as e:
+            logger.error(f"OpenAI API请求失败: {str(e)}")
+            raise ValueError(f"OpenAI API请求失败: {str(e)}")
 
     @commands.hybrid_command(name="yo", description="Chat with OpenAI models.")
     async def yo(
@@ -163,15 +156,17 @@ class Openai(commands.Cog):
         question: str,
         context_length: int = None,
     ):
+        # 获取服务器和频道配置
+        guild_id = str(ctx.guild.id)
         channel_id = str(ctx.channel.id)
-        if channel_id not in self.chat_channels:
-            await ctx.send("I apologize, but I cannot provide any responses in channels where chatting is not permitted. I aim to chat in permitted channels.", delete_after=5, ephemeral=True)
+        channel_config = self.get_channel_config(guild_id, channel_id)
+        
+        if not channel_config:
+            await ctx.send("此频道未配置为聊天频道", ephemeral=True)
             return
+            
         if context_length is None:
             context_length = self.context_length
-        
-        # 获取当前服务器ID
-        server_id = self.chat_channels[channel_id].get("server_id", "server_1")
         
         # 模型名称作为用户名
         username = model
@@ -190,16 +185,12 @@ class Openai(commands.Cog):
             # 使用webhook发送消息，这样可以自定义名称
             webhook = await self.get_or_create_webhook(ctx.channel)
             
-            # 获取对应预设的头像URL（如果有）
-            avatar_url = await self.get_model_avatar_url(model, channel_id)
-            
             # 根据频道类型选择正确的发送方式
             if isinstance(ctx.channel, discord.Thread):
                 # 发送初始消息到线程中
                 typing_msg = await webhook.send(
                     content="typing...", 
                     username=username, 
-                    avatar_url=avatar_url, 
                     wait=True,
                     thread=ctx.channel
                 )
@@ -208,12 +199,11 @@ class Openai(commands.Cog):
                 typing_msg = await webhook.send(
                     content="typing...", 
                     username=username, 
-                    avatar_url=avatar_url, 
                     wait=True
                 )
             
             # 使用流式生成并更新消息
-            await self.stream_openai_response(model, prompt, username, typing_msg, channel_id, webhook)
+            await self.stream_openai_response(model, prompt, username, typing_msg, channel_id, guild_id, webhook)
         except Exception as e:
             logger.error(f"OpenAI请求失败: {e}")
             await ctx.send(f"请求失败：{str(e)}", ephemeral=True)
@@ -222,15 +212,17 @@ class Openai(commands.Cog):
     async def yoo(
         self, ctx: commands.Context, *, question: str, context_length: int = None
     ):
+        # 获取服务器和频道配置
+        guild_id = str(ctx.guild.id)
         channel_id = str(ctx.channel.id)
-        if channel_id not in self.chat_channels:
-            await ctx.send("I apologize, but I cannot provide any responses in channels where chatting is not permitted. I aim to chat in permitted channels.", delete_after=5, ephemeral=True)
+        channel_config = self.get_channel_config(guild_id, channel_id)
+        
+        if not channel_config:
+            await ctx.send("此频道未配置为聊天频道", ephemeral=True)
             return
+            
         if context_length is None:
             context_length = self.context_length
-        
-        # 获取当前服务器ID
-        server_id = self.chat_channels[channel_id].get("server_id", "server_1")
         
         # 使用默认模型
         model = self.model
@@ -250,16 +242,12 @@ class Openai(commands.Cog):
             # 使用webhook发送消息，这样可以自定义名称
             webhook = await self.get_or_create_webhook(ctx.channel)
             
-            # 获取对应预设的头像URL（如果有）
-            avatar_url = await self.get_model_avatar_url(model, channel_id)
-            
             # 根据频道类型选择正确的发送方式
             if isinstance(ctx.channel, discord.Thread):
                 # 发送初始消息到线程中
                 typing_msg = await webhook.send(
                     content="typing...", 
                     username=username, 
-                    avatar_url=avatar_url, 
                     wait=True,
                     thread=ctx.channel
                 )
@@ -268,12 +256,11 @@ class Openai(commands.Cog):
                 typing_msg = await webhook.send(
                     content="typing...", 
                     username=username, 
-                    avatar_url=avatar_url, 
                     wait=True
                 )
             
             # 使用流式生成并更新消息
-            await self.stream_openai_response(model, prompt, username, typing_msg, channel_id, webhook)
+            await self.stream_openai_response(model, prompt, username, typing_msg, channel_id, guild_id, webhook)
         except Exception as e:
             logger.error(f"OpenAI请求失败: {e}")
             await ctx.send(f"请求失败：{str(e)}", ephemeral=True)
@@ -282,262 +269,92 @@ class Openai(commands.Cog):
         """获取或创建用于发送消息的webhook"""
         # 如果是线程，获取父频道
         if isinstance(channel, discord.Thread):
-            parent_channel = channel.parent
-            # 尝试查找现有的webhook
-            webhooks = await parent_channel.webhooks()
-            for webhook in webhooks:
-                if webhook.user == self.bot.user:
-                    return webhook
-                    
-            # 如果没有找到，创建一个新的webhook
-            return await parent_channel.create_webhook(name=f"{self.bot.user.name} Webhook")
-        else:
-            # 处理普通文字频道
-            webhooks = await channel.webhooks()
-            for webhook in webhooks:
-                if webhook.user == self.bot.user:
-                    return webhook
-                    
-            # 如果没有找到，创建一个新的webhook
-            return await channel.create_webhook(name=f"{self.bot.user.name} Webhook")
+            channel = channel.parent
         
-    async def get_model_avatar_url(self, model: str, channel_id=None):
-        """获取模型对应的头像URL"""
-        # 如果有频道ID，尝试获取其所属的guild_id
-        guild_id = None
-        if channel_id and channel_id in self.chat_channels:
-            # 查找频道对应的Discord频道以获取guild_id
-            channel = self.bot.get_channel(int(channel_id))
-            if channel and hasattr(channel, 'guild'):
-                guild_id = channel.guild.id
+        # 检查现有的webhook
+        webhooks = await channel.webhooks()
+        for webhook in webhooks:
+            if webhook.url == self.webhook_url:
+                return webhook
         
-        # 尝试从Agent Manager获取预设信息
-        if hasattr(self.bot, "get_cog"):
-            agent_manager = self.bot.get_cog("AgentManager")
-            if agent_manager:
-                # 获取当前频道的预设，传递guild_id参数
-                preset_path = agent_manager.get_current_preset_path(channel_id, guild_id)
-                # 预设目录下可能有avatar文件
-                import os
-                import glob
-                
-                avatar_files = glob.glob(f"{preset_path}/avatar.*")
-                if avatar_files:
-                    # 构建discord CDN URL
-                    avatar_file = avatar_files[0]
-                    # 使用bot的默认头像，不用找avatar文件
-                    return self.bot.user.display_avatar.url
-                    
-        # 默认使用bot头像
-        return self.bot.user.display_avatar.url
-
-    async def stream_openai_response(self, model: str, prompt: str, username: str, message: discord.Message, channel_id=None, webhook=None):
-        """使用真正的流式传输处理OpenAI响应并更新Discord消息"""
-        url = f"{self.endpoint}/chat/completions"
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {self.key}",
-        }
-        
-        # 尝试获取频道所属的guild_id
-        guild_id = None
-        if channel_id and channel_id in self.chat_channels:
-            # 查找频道对应的Discord频道以获取guild_id
-            channel = self.bot.get_channel(int(channel_id))
-            if channel and hasattr(channel, 'guild'):
-                guild_id = channel.guild.id
-        
-        # 尝试从Agent Manager获取配置
-        openai_config = {}
-        preset = None
-        
-        if hasattr(self.bot, "get_cog"):
-            agent_manager = self.bot.get_cog("AgentManager")
-            if agent_manager:
-                # 获取OpenAI配置，传递guild_id参数
-                config_from_preset = agent_manager.get_preset_json("openai_config.json", channel_id, guild_id)
-                if config_from_preset:
-                    openai_config = config_from_preset
-                
-                # 根据当前的使用场景选择预设
-                if "<reference>" in prompt and "<attachment>" in prompt:
-                    preset = agent_manager.get_preset_json("attachment_preset.json", channel_id, guild_id)
-                elif "<reference>" in prompt:
-                    preset = agent_manager.get_preset_json("reference_preset.json", channel_id, guild_id)
-                else:
-                    preset = agent_manager.get_preset_json("chat_preset.json", channel_id, guild_id)
-        
-        # 构建消息
-        messages = []
-        
-        # 如果未获取到预设，直接使用原始格式
-        if not preset:
-            messages = [{"role": "user", "content": prompt}]
-        else:
-            # 构建符合预设格式的消息数组
-            if preset.get("system_prompt"):
-                messages.append({
-                    "role": "system", 
-                    "content": preset["system_prompt"]
-                })
-            
-            messages.append({
-                "role": "user", 
-                "content": preset.get("first_user_message", "历史消息如下")
-            })
-            
-            messages.append({
-                "role": "assistant", 
-                "content": prompt  # 这里是原始prompt，它已经包含了main_content的格式
-            })
-            
-            messages.append({
-                "role": "user", 
-                "content": preset.get("last_user_message", "Your reply:")
-            })
-        
-        data = {
-            "model": self.models[model]["id"],
-            "messages": messages,
-            "top_p": openai_config.get("top_p", 0.95),
-            "top_k": openai_config.get("top_k", 55),
-            "temperature": openai_config.get("temperature", 1.0),
-            "stream": True,  # 启用流式传输
-        }
-        
-        # 记录API请求数据
-        logger.info(f"OpenAI API 请求数据: {json.dumps(data, ensure_ascii=False, indent=2)}")
-        
-        # 创建新的ClientSession用于API请求
-        full_response = ""
-        update_counter = 0
-        last_update_time = asyncio.get_event_loop().time()
-        chunk_per_edit = self.models[model].get("chunk_per_edit", 10)  # 每10个数据块更新一次消息
-        
+        # 如果没有找到，创建新的webhook
+        return await channel.create_webhook(name="OpenAI Bot")
+    
+    async def stream_openai_response(self, model: str, prompt: str, username: str, message: discord.Message, channel_id=None, guild_id=None, webhook=None):
+        """流式生成并更新OpenAI响应"""
         try:
-            async with ClientSession() as session:
-                async with session.post(url, headers=headers, json=data) as resp:
-                    resp.raise_for_status()
-                    
-                    # 处理流式响应
-                    async for line in resp.content:
-                        if not line:
-                            continue
-                        
-                        line_text = line.decode('utf-8').strip()
-                        if line_text == "data: [DONE]":
-                            break
-                        
-                        if line_text.startswith('data: '):
-                            json_data = json.loads(line_text[6:])
-                            
-                            # 提取增量内容
-                            if 'choices' in json_data and len(json_data['choices']) > 0:
-                                delta = json_data['choices'][0].get('delta', {})
-                                if 'content' in delta:
-                                    content = delta['content']
-                                    full_response += content
-                                    update_counter += 1
-                                    
-                                    # 每chunk_per_edit个片段更新一次或超过0.5秒未更新
-                                    current_time = asyncio.get_event_loop().time()
-                                    if update_counter % chunk_per_edit == 0 or (current_time - last_update_time) > 0.5:
-                                        try:
-                                            # 使用webhook编辑消息，保持自定义用户名
-                                            await message.edit(content=full_response)
-                                            last_update_time = current_time
-                                        except Exception as edit_error:
-                                            logger.error(f"编辑消息失败: {edit_error}")
+            # 获取完整响应
+            response = await self.request_openai(model, prompt, username, guild_id, channel_id)
             
-            # 最终更新，确保显示完整回复
-            if full_response:
-                try:
-                    await message.edit(content=full_response)
-                except Exception as final_edit_error:
-                    logger.error(f"最终编辑消息失败: {final_edit_error}")
-                
-        except Exception as e:
-            logger.error(f"处理流式响应时出错: {e}")
-            # 如果已经有部分响应，则保留并标明错误
-            if full_response:
-                try:
-                    await message.edit(content=f"{full_response}\n\n*[处理过程中出现错误]*")
-                except Exception as error_edit:
-                    logger.error(f"编辑错误消息失败: {error_edit}")
+            # 检查响应是否为空
+            if not response or response.strip() == "":
+                response = "抱歉，我现在无法生成回复。请稍后再试。"
+            
+            # 更新消息
+            if webhook and isinstance(message, discord.WebhookMessage):
+                # 不再传递avatar_url，使用默认头像
+                await message.edit(content=response)
             else:
-                try:
-                    await message.edit(content="抱歉，请求处理过程中出现错误。")
-                except Exception as error_edit:
-                    logger.error(f"编辑错误消息失败: {error_edit}")
-            raise
-
-    @commands.hybrid_command(name="models", description="List available OpenAI models.")
-    @auto_delete(delay=0)
-    async def models(self, ctx: commands.Context):
-        await ctx.send("\n".join(self.models.keys()), ephemeral=True, delete_after=5)
-
-    @commands.hybrid_command(
-        name="set_model", description="Set the default OpenAI model."
-    )
-    @commands.is_owner()
-    @auto_delete(delay=0)
-    async def set_model(self, ctx: commands.Context, model: str):
-        if model not in self.models.keys():
-            await ctx.send("Model not found.", ephemeral=True, delete_after=5)
-            return
-        self.model = model
-        await ctx.send("Model set.", ephemeral=True, delete_after=5)
-
-    @commands.hybrid_command(
-        name="set_openai_context_length",
-        description="Set the context length for OpenAI models.",
-    )
-    @commands.is_owner()
-    @auto_delete(delay=0)
-    async def set_openai_context_length(
-        self, ctx: commands.Context, context_length: int
-    ):
-        self.context_length = context_length
-        await ctx.send("Context length set.", ephemeral=True, delete_after=5)
-
-    @commands.hybrid_command(
-        name="set_openai_timezone", description="Set the timezone for OpenAI models."
-    )
-    @commands.is_owner()
-    @auto_delete(delay=0)
-    async def set_openai_timezone(self, ctx: commands.Context, timezone: str):
-        try:
-            self.context_prompter.set_tz(timezone)
-            await ctx.send(
-                f"Timezone set to {timezone}.", ephemeral=True, delete_after=5
-            )
+                await message.edit(content=response)
+                
         except Exception as e:
-            await ctx.send(f"Invalid timezone.", ephemeral=True, delete_after=5)
+            error_msg = f"生成响应时发生错误: {str(e)}"
+            logger.error(error_msg)
+            if webhook and isinstance(message, discord.WebhookMessage):
+                await message.edit(content=error_msg)
+            else:
+                await message.edit(content=error_msg)
 
-    def update_api_key(self):
-        """更新api_key"""
-        # 获取当前的所有api_key
-        self.api_keys = []
-        # 加载配置
-        self.key_type = config.get("openai_key_type", "base64")
-        if self.key_type == "base64":
-            # 获取加密的api_key列表
-            encoded_api_keys = config.get("openai_api_keys", [])
-            # 解密api_key列表
-            for encoded_api_key in encoded_api_keys:
-                try:
-                    # 进行base64解码
-                    api_key = base64.b64decode(encoded_api_key).decode("utf-8")
-                    self.api_keys.append(api_key)
-                except Exception as e:
-                    logger.error(f"解密API Key失败：{e}")
-        else:
-            # 直接获取未加密的api_key列表
-            self.api_keys = config.get("openai_api_keys", [])
-        # 获取代理设置
-        self.proxy = config.get("openai_proxy", "")
+    @commands.hybrid_command(name="list_models", description="列出所有可用的OpenAI模型")
+    async def list_models(self, ctx: commands.Context):
+        """列出所有可用的OpenAI模型"""
+        model_list = []
+        for model_name in self.models.keys():
+            if model_name == self.model:
+                model_list.append(f"**{model_name}** (当前默认)")
+            else:
+                model_list.append(model_name)
+        
+        embed = discord.Embed(
+            title="可用的OpenAI模型",
+            description="\n".join(model_list),
+            color=discord.Color.blue()
+        )
+        await ctx.send(embed=embed)
+
+    @commands.hybrid_command(name="set_default_model", description="设置默认的OpenAI模型")
+    @commands.has_permissions(administrator=True)
+    async def set_default_model(self, ctx: commands.Context, model: str):
+        """设置默认的OpenAI模型
+        
+        参数:
+            model: 模型名称，可以使用 /list_models 查看所有可用模型
+        """
+        if model not in self.models:
+            available_models = "\n".join(self.models.keys())
+            await ctx.send(f"错误：找不到模型 '{model}'。可用的模型有：\n{available_models}", ephemeral=True)
+            return
+        
+        self.model = model
+        config.write("default_openai_model", model)
+        await ctx.send(f"默认模型已设置为：{model}", ephemeral=True)
+
+    @set_default_model.error
+    async def set_default_model_error(self, ctx: commands.Context, error):
+        if isinstance(error, commands.MissingPermissions):
+            await ctx.send("错误：只有管理员可以更改默认模型", ephemeral=True)
 
 
 async def setup(bot: commands.Bot):
+    openai_key = config.get("openai_key", "")
+    if not openai_key or openai_key == "YOUR_OPENAI_API_KEY":
+        print(cpr.warning("OpenAI API key not set, skipping OpenAI setup"))
+        return
+
     webhook_url = config.get("webhook_url")
+    if not webhook_url:
+        print(cpr.error("Webhook URL not set, cannot setup OpenAI"))
+        return
+
     await bot.add_cog(Openai(bot, webhook_url))
+    print(cpr.success("Cog loaded: Openai"))

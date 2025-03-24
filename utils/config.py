@@ -9,50 +9,44 @@ class Config:
         self.reload()
 
     def get(self, key: str, default=None):
-        return self._config.get(key, default)
+        """获取配置值，支持多层级访问，如 'servers.main.chat_channels'"""
+        keys = key.split('.')
+        value = self._config
+        for k in keys:
+            if isinstance(value, dict):
+                value = value.get(k, default)
+            else:
+                return default
+        return value
 
     def write(self, key: str, value):
-        self._config[key] = value
+        """写入配置值，支持多层级写入，如 'servers.main.chat_channels'"""
+        keys = key.split('.')
+        current = self._config
+        
+        # 遍历到最后一个key之前
+        for k in keys[:-1]:
+            if k not in current:
+                current[k] = {}
+            current = current[k]
+        
+        # 设置最后一个key的值
+        current[keys[-1]] = value
+        
+        # 保存到文件
         with open(CONFIG, "w", encoding="utf-8") as f:
-            json.dump(self._config, f, indent=4)
-
-    def get_server_config(self, server_id: str, default=None):
-        """获取指定服务器的配置"""
-        servers = self._config.get("servers", {})
-        return servers.get(server_id, default)
-
-    def get_server_value(self, server_id: str, key: str, default=None):
-        """获取指定服务器的特定配置项"""
-        server_config = self.get_server_config(server_id)
-        if server_config:
-            return server_config.get(key, default)
-        return default
-
-    def write_server_value(self, server_id: str, key: str, value):
-        """更新指定服务器的特定配置项"""
-        servers = self._config.get("servers", {})
-        if server_id not in servers:
-            servers[server_id] = {}
-        servers[server_id][key] = value
-        self._config["servers"] = servers
-        with open(CONFIG, "w", encoding="utf-8") as f:
-            json.dump(self._config, f, indent=4)
-
-    def get_all_servers(self):
-        """获取所有服务器配置"""
-        return self._config.get("servers", {})
-
-    def add_server(self, server_id: str, server_config: dict):
-        """添加新服务器配置"""
-        servers = self._config.get("servers", {})
-        servers[server_id] = server_config
-        self._config["servers"] = servers
-        with open(CONFIG, "w", encoding="utf-8") as f:
-            json.dump(self._config, f, indent=4)
+            json.dump(self._config, f, indent=4, ensure_ascii=False)
 
     def reload(self):
         with open(CONFIG, "r", encoding="utf-8") as f:
             self._config = json.load(f)
+
+    def get_server_config(self, guild_id: str):
+        """获取指定服务器的配置"""
+        for server_name, server_config in self._config.get("servers", {}).items():
+            if server_config.get("guild_id") == guild_id:
+                return server_name, server_config
+        return None, None
 
 
 config = Config()

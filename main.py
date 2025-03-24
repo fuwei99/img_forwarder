@@ -10,13 +10,14 @@ import aiohttp
 import logging
 import threading
 import webbrowser
+import time
+import requests
 from flask import Flask, render_template, request, jsonify, redirect, url_for, send_from_directory
 from werkzeug.utils import secure_filename
 from PIL import Image, ImageDraw, ImageFont
 import io
 import shutil
 from utils.config import config
-from utils.logger import logger
 
 # 配置Flask应用
 app = Flask(__name__, 
@@ -212,26 +213,30 @@ def preset_files(filename):
 
 @bot.event
 async def on_ready():
-    logger.info(f'Bot logged in as {bot.user.name} (ID: {bot.user.id})')
+    print(f'Bot logged in as {bot.user.name} (ID: {bot.user.id})')
+    print(f'Bot invite link: https://discord.com/oauth2/authorize?client_id={bot.user.id}&permissions=8&scope=bot')
     
     # Auto sync slash commands
-    logger.info("Syncing slash commands...")
+    print("Syncing slash commands...")
     try:
         synced = await bot.tree.sync()
-        logger.info(f"Synced {len(synced)} command(s).")
+        print(f"Synced {len(synced)} command(s).")
     except Exception as e:
-        logger.error(f"Failed to sync commands: {e}")
+        print(f"Failed to sync commands: {e}")
     
     # 确保所有cog都更新频道配置
     try:
         agent_manager = bot.get_cog("AgentManager")
         if agent_manager:
+            print("正在更新所有cog的频道配置...")
             agent_manager.reload_chat_channels()  # 重新加载配置
             await agent_manager.update_all_cogs_channels()  # 更新所有cog的频道配置
-            logger.info("All cog channel configurations updated")
+            print("所有cog的频道配置已更新")
     except Exception as e:
-        logger.error(f"Failed to update channel configs: {e}")
+        print(f"Failed to update channel configs: {e}")
         traceback.print_exc()
+    
+    print('-' * 50)
 
 # 添加一个帮助调试的命令，用于检查已加载的cog
 @bot.command(name="list_cogs")
@@ -247,43 +252,56 @@ async def list_cogs(ctx):
                   f"**未加载的Cogs ({len(not_loaded)}):**\n"
                   f"{', '.join(not_loaded)}")
 
+# 保持Space活跃的函数
+def keep_alive():
+    """定期自我请求以保持Space活跃"""
+    print("启动保活线程...")
+    while True:
+        try:
+            # 获取SPACE_HOST环境变量，这是HF Space自动提供的
+            space_host = os.environ.get('SPACE_HOST')
+            # 如果没有SPACE_HOST环境变量，说明不是在HF Space上运行
+            if not space_host:
+                # 本地调试环境
+                url = "http://127.0.0.1:5000"
+            else:
+                # HF Space环境
+                url = f"https://{space_host}"
+            
+            requests.get(url, timeout=10)
+            print(f"[KeepAlive] 自我请求成功: {time.strftime('%Y-%m-%d %H:%M:%S')}")
+        except Exception as e:
+            print(f"[KeepAlive] 自我请求失败: {e}")
+        
+        # 每30分钟请求一次，避免Space超时
+        time.sleep(1800)
+
 def start_flask():
     # 创建默认头像
     create_default_avatar()
     
-    app.run(host='127.0.0.1', port=5000)
+    # 启动保活线程
+    keep_alive_thread = threading.Thread(target=keep_alive)
+    keep_alive_thread.daemon = True
+    keep_alive_thread.start()
+    
+    # 获取PORT环境变量，默认7860（HF Space默认端口）
+    # 如果环境变量不存在，就使用5000端口（本地开发环境）
+    port = int(os.environ.get('PORT', 5000))
+    host = '0.0.0.0' if os.environ.get('SPACE_HOST') else '127.0.0.1'
+    
+    app.run(host=host, port=port)
 
 async def main():
     token = config.get("token")
     try:
-        logger.info("Loading cogs...")
-        
-        # 确保配置中包含servers结构
-        if "servers" not in config._config:
-            logger.info("Initializing multi-server configuration structure...")
-            # 如果不存在服务器配置，从现有配置创建server_1
-            servers = {}
-            
-            # 从全局配置中获取频道配置
-            server_1 = {
-                "name": "主服务器",
-                "discord_guild_id": "",  # 初始为空，需要用户手动设置
-                "source_channel_id": config.get("source_channel_id", ""),
-                "target_channel_id": config.get("target_channel_id", ""),
-                "main_channel_id": config.get("main_channel_id", ""),
-                "backup_channel_id": config.get("backup_channel_id", ""),
-                "chat_channels": config.get("chat_channels", {})
-            }
-            
-            servers["server_1"] = server_1
-            config.write("servers", servers)
-            logger.info("Multi-server configuration structure initialized")
+        print("Loading cogs...")
         
         # 先加载AgentManager cog
         try:
             await bot.load_extension("cogs.agent_manager")
         except Exception as e:
-            logger.error(f"Failed to load AgentManager: {e}")
+            print(f"Failed to load AgentManager: {e}")
             traceback.print_exc()
         
         # 然后加载其他cog
@@ -292,10 +310,10 @@ async def main():
                 try:
                     await bot.load_extension(f"cogs.{file[:-3]}")
                 except Exception as e:
-                    logger.error(f"Failed to load extension {file}: {e}")
+                    print(f"Failed to load extension {file}: {e}")
                     traceback.print_exc()
         
-        logger.info("Starting bot...")
+        print("Starting bot...")
         # Create custom aiohttp session
         connector = aiohttp.TCPConnector(ssl=ssl_context)
         session = aiohttp.ClientSession(connector=connector)
@@ -308,53 +326,17 @@ async def main():
         flask_thread.daemon = True  # 主程序退出时，Flask线程也会退出
         flask_thread.start()
         
-        # 打开浏览器
-        webbrowser.open('http://127.0.0.1:5000')
+        # 是否在Hugging Face Space环境下，不打开浏览器
+        if not os.environ.get('SPACE_HOST'):
+            webbrowser.open('http://127.0.0.1:5000')
         
         await bot.start(token)
     except Exception as e:
-        logger.error(f"An error occurred: {e}")
+        print(f"An error occurred: {e}")
         traceback.print_exc()
     finally:
         await bot.close()
 
-async def update_chat_channels_for_all_cogs(bot):
-    """为所有cog更新聊天频道配置"""
-    for cog_name in bot.cogs:
-        cog = bot.get_cog(cog_name)
-        if hasattr(cog, 'update_chat_channels'):
-            cog.update_chat_channels()
-
-
-async def sync_commands_for_guild(bot, guild_id):
-    """同步指定guild的指令"""
-    guild = bot.get_guild(guild_id)
-    if guild:
-        await bot.tree.sync(guild=guild)
-        logger.info(f"已同步指令到服务器 {guild.name} (ID: {guild.id})")
-    else:
-        logger.warning(f"无法同步指令到服务器ID {guild_id}：找不到服务器")
-
-
-async def sync_commands(bot):
-    """同步所有指令"""
-    # 首先同步全局指令
-    try:
-        await bot.tree.sync()
-        logger.info("已同步全局指令")
-    except Exception as e:
-        logger.error(f"同步全局指令时出错: {e}")
-
-    # 然后同步每个服务器的指令
-    servers = config.get("registered_servers", {})
-    for server_id in servers:
-        try:
-            guild_id = int(server_id.replace("server_", ""))
-            await sync_commands_for_guild(bot, guild_id)
-        except ValueError:
-            logger.error(f"无效的服务器ID格式: {server_id}")
-        except Exception as e:
-            logger.error(f"同步服务器 {server_id} 指令时出错: {e}")
 
 if __name__ == "__main__":
     try:

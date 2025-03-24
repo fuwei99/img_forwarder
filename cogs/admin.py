@@ -33,51 +33,73 @@ class Admin(commands.Cog):
             f"Loaded cogs: {', '.join(cogs)}", ephemeral=True, delete_after=5
         )
 
-    @commands.hybrid_command(name="load", description="Load a cog.", hidden=True)
+    @commands.hybrid_command(name="load", description="加载指定的cog")
     @commands.is_owner()
     @auto_delete(delay=0)
     async def load(self, ctx: commands.Context, cog: str):
-        await self.bot.load_extension(f"cogs.{mapping_cog(cog)}")
-        await ctx.send(f"Loaded cog: {cog}", ephemeral=True, delete_after=5)
+        try:
+            # 先发送消息
+            await ctx.send(f"正在加载 cog: {cog}...", ephemeral=True, delete_after=5)
+            # 然后加载cog
+            await self.bot.load_extension(f"cogs.{mapping_cog(cog)}")
+        except Exception as e:
+            await ctx.channel.send(f"加载 {cog} 失败: {str(e)}", delete_after=5)
 
-    @commands.hybrid_command(name="unload", description="Unload a cog.")
+    @commands.hybrid_command(name="unload", description="卸载指定的cog")
     @commands.is_owner()
     @auto_delete(delay=0)
     async def unload(self, ctx: commands.Context, cog: str):
-        await self.bot.unload_extension(f"cogs.{mapping_cog(cog)}")
-        await ctx.send(f"Unloaded cog: {cog}", ephemeral=True, delete_after=5)
+        try:
+            # 先发送消息
+            await ctx.send(f"正在卸载 cog: {cog}...", ephemeral=True, delete_after=5)
+            # 然后卸载cog
+            await self.bot.unload_extension(f"cogs.{mapping_cog(cog)}")
+        except Exception as e:
+            await ctx.channel.send(f"卸载 {cog} 失败: {str(e)}", delete_after=5)
 
-    @commands.hybrid_command(name="reload", description="Reload a cog.", hidden=True)
+    @commands.hybrid_command(name="reload", description="重新加载指定的cog")
     @commands.is_owner()
     @auto_delete(delay=0)
     async def reload(self, ctx: commands.Context, cog: str):
-        await self.bot.reload_extension(f"cogs.{mapping_cog(cog)}")
-        await ctx.send(f"Reloaded cog: {cog}", ephemeral=True, delete_after=5)
-
-    @commands.hybrid_command(
-        name="reload_all_loaded",
-        description="Reload all cogs that are currently loaded.",
-        hidden=True,
-    )
-    @commands.is_owner()
-    @auto_delete(delay=0)
-    async def reload_all(self, ctx: commands.Context):
-        for cog in self.bot.cogs:
+        try:
+            # 先发送消息
+            await ctx.send(f"正在重载 cog: {cog}...", ephemeral=True, delete_after=5)
+            # 然后重载cog
             await self.bot.reload_extension(f"cogs.{mapping_cog(cog)}")
-        await ctx.send("Reloaded all cogs.", ephemeral=True, delete_after=5)
+        except Exception as e:
+            await ctx.channel.send(f"重载 {cog} 失败: {str(e)}", delete_after=5)
 
     @commands.hybrid_command(
         name="reload_all",
-        description="Reload all cogs in the cogs directory.",
+        description="重新加载所有已加载的cog",
         hidden=True,
     )
     @commands.is_owner()
     @auto_delete(delay=0)
     async def reload_all(self, ctx: commands.Context):
-        for file in os.listdir("cogs"):
-            if file.endswith(".py"):
-                await self.bot.reload_extension(f"cogs.{file[:-3]}")
-        await ctx.send("Reloaded all cogs.", ephemeral=True, delete_after=5)
+        success_cogs = []
+        failed_cogs = []
+        
+        # 获取当前已加载的cog列表
+        loaded_cogs = list(self.bot.cogs.keys())
+        
+        for cog_name in loaded_cogs:
+            try:
+                # 将cog名称转换为文件名格式
+                file_name = mapping_cog(cog_name)
+                await self.bot.reload_extension(f"cogs.{file_name}")
+                success_cogs.append(cog_name)
+            except Exception as e:
+                failed_cogs.append(f"{cog_name} ({str(e)})")
+        
+        # 构建响应消息
+        response = []
+        if success_cogs:
+            response.append(f"✅ 成功重载的cog: {', '.join(success_cogs)}")
+        if failed_cogs:
+            response.append(f"❌ 重载失败的cog: {', '.join(failed_cogs)}")
+        
+        await ctx.send("\n".join(response), ephemeral=True, delete_after=10)
 
     @commands.hybrid_command(
         name="nickname", description="Change nickname.", hidden=True
@@ -90,7 +112,7 @@ class Admin(commands.Cog):
         await ctx.send(f"Hola, I'm now {nickname}, どうぞよろしく！")
 
     @commands.hybrid_command(
-        name="reload_config", description="Reload config.", hidden=True
+        name="reload_config", description="重新加载配置文件", hidden=True
     )
     @commands.is_owner()
     @auto_delete(delay=0)
@@ -108,3 +130,4 @@ class Admin(commands.Cog):
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(Admin(bot))
+    print(cpr.success("Cog loaded: Admin"))

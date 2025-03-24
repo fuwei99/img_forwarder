@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 </head>
 <body>
     <div class="container">
@@ -43,7 +44,7 @@
                             <button class="nav-link active" id="basic-tab" data-bs-toggle="tab" data-bs-target="#basic-pane" type="button" role="tab">基本设置</button>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="servers-tab" data-bs-toggle="tab" data-bs-target="#servers-pane" type="button" role="tab">服务器配置</button>
+                            <button class="nav-link" id="servers-tab" data-bs-toggle="tab" data-bs-target="#servers-pane" type="button" role="tab">服务器设置</button>
                         </li>
                         <li class="nav-item" role="presentation">
                             <button class="nav-link" id="gemini-tab" data-bs-toggle="tab" data-bs-target="#gemini-pane" type="button" role="tab">Gemini 设置</button>
@@ -86,18 +87,20 @@
                             </div>
                         </div>
 
-                        <!-- 服务器配置 -->
+                        <!-- 服务器设置 -->
                         <div class="tab-pane fade" id="servers-pane" role="tabpanel" aria-labelledby="servers-tab">
-                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                <h4>服务器列表</h4>
-                                <button type="button" class="btn btn-primary" id="addServerBtn">
-                                    <i class="bi bi-plus"></i> 添加服务器
-                                </button>
-                            </div>
-
-                            <!-- 服务器列表和配置 -->
-                            <div id="serverAccordion" class="accordion mb-4">
-                                <!-- 这里会动态添加服务器配置面板 -->
+                            <div class="card mb-3">
+                                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                                    <h5 class="mb-0">服务器配置</h5>
+                                    <button type="button" class="btn btn-sm btn-primary" id="addServerBtn">
+                                        <i class="bi bi-plus"></i> 添加服务器
+                                    </button>
+                                </div>
+                                <div class="card-body">
+                                    <div id="servers_container" class="mb-3">
+                                        <!-- 这里会动态添加服务器设置 -->
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -184,19 +187,28 @@
                     </div>
                     <div class="modal-body">
                         <div class="mb-3">
-                            <label for="new_server_id" class="form-label">服务器 ID</label>
-                            <input type="text" class="form-control" id="new_server_id" placeholder="例如: server_3">
-                            <div class="form-text">用于在配置中标识此服务器的ID</div>
-                        </div>
-                        <div class="mb-3">
                             <label for="new_server_name" class="form-label">服务器名称</label>
-                            <input type="text" class="form-control" id="new_server_name" placeholder="例如: 测试服务器">
-                            <div class="form-text">为此服务器设置一个友好的名称</div>
+                            <input type="text" class="form-control" id="new_server_name" placeholder="输入服务器名称">
                         </div>
                         <div class="mb-3">
-                            <label for="new_discord_guild_id" class="form-label">Discord 服务器 ID</label>
-                            <input type="text" class="form-control" id="new_discord_guild_id" placeholder="例如: 1077066115787067392">
-                            <div class="form-text">Discord 服务器的唯一 ID</div>
+                            <label for="new_server_guild_id" class="form-label">服务器 ID</label>
+                            <input type="text" class="form-control" id="new_server_guild_id" placeholder="输入服务器 ID">
+                        </div>
+                        <div class="mb-3">
+                            <label for="new_server_source_channel_id" class="form-label">源频道 ID</label>
+                            <input type="text" class="form-control" id="new_server_source_channel_id" placeholder="输入源频道 ID">
+                        </div>
+                        <div class="mb-3">
+                            <label for="new_server_target_channel_id" class="form-label">目标频道 ID</label>
+                            <input type="text" class="form-control" id="new_server_target_channel_id" placeholder="输入目标频道 ID">
+                        </div>
+                        <div class="mb-3">
+                            <label for="new_server_main_channel_id" class="form-label">主频道 ID</label>
+                            <input type="text" class="form-control" id="new_server_main_channel_id" placeholder="输入主频道 ID">
+                        </div>
+                        <div class="mb-3">
+                            <label for="new_server_backup_channel_id" class="form-label">备份频道 ID</label>
+                            <input type="text" class="form-control" id="new_server_backup_channel_id" placeholder="输入备份频道 ID">
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -216,7 +228,12 @@
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
-                        <input type="hidden" id="current_server_id" value="">
+                        <div class="mb-3">
+                            <label for="new_channel_server" class="form-label">选择服务器</label>
+                            <select class="form-select" id="new_channel_server">
+                                <!-- 服务器选项会在加载时动态填充 -->
+                            </select>
+                        </div>
                         <div class="mb-3">
                             <label for="new_channel_id" class="form-label">频道 ID</label>
                             <input type="text" class="form-control" id="new_channel_id" placeholder="输入频道 ID">
@@ -288,584 +305,351 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     <script>
-        // 配置数据
-        let configData = {};
-        let presetsList = [];
+        // 加载配置
+        function loadConfig() {
+            $.ajax({
+                url: '/api/config',
+                type: 'GET',
+                success: function(config) {
+                    console.log('加载配置成功:', config);
+                    
+                    // 基本设置
+                    $('#token').val(config.token || '');
+                    $('#webhook_url').val(config.webhook_url || '');
+                    $('#target_language').val(config.target_language || 'Chinese');
+                    
+                    // 服务器设置
+                    $('#servers_container').empty();
+                    if (config.servers) {
+                        Object.entries(config.servers).forEach(([serverName, serverConfig]) => {
+                            addServerToUI(serverName, serverConfig);
+                        });
+                    }
+                    
+                    // Gemini设置
+                    $('#current_key').val(config.current_key || 0);
+                    $('#gemini_chunk_per_edit').val(config.gemini_chunk_per_edit || 2);
+                    
+                    // Gemini密钥
+                    $('#gemini_keys_container').empty();
+                    if (config.gemini_keys && Array.isArray(config.gemini_keys)) {
+                        config.gemini_keys.forEach((key, index) => {
+                            addGeminiKeyInput(key);
+                        });
+                    }
+                    
+                    // OpenAI设置
+                    $('#openai_key').val(config.openai_key || '');
+                    $('#openai_endpoint').val(config.openai_endpoint || '');
+                    
+                    // OpenAI模型
+                    $('#ai_models_container').empty();
+                    if (config.openai_models) {
+                        Object.entries(config.openai_models).forEach(([modelName, modelConfig]) => {
+                            addModelToUI(modelName, modelConfig);
+                        });
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('加载配置失败:', error);
+                    alert('加载配置失败，请检查控制台以获取详细信息');
+                }
+            });
+        }
 
-        // DOM 加载完成后初始化
-        document.addEventListener('DOMContentLoaded', async function() {
-            try {
-                // 获取配置数据
-                const response = await fetch('/api/config');
-                configData = await response.json();
-                
-                // 获取预设列表
-                const presetsResponse = await fetch('/api/presets');
-                const presetsData = await presetsResponse.json();
-                presetsList = Object.keys(presetsData);
-                
-                // 填充预设选择器
-                const presetSelect = document.getElementById('new_channel_preset');
-                presetsList.forEach(preset => {
-                    const option = document.createElement('option');
-                    option.value = preset;
-                    option.textContent = preset;
-                    presetSelect.appendChild(option);
+        // 添加服务器到UI
+        function addServerToUI(serverName, serverConfig) {
+            const serverHtml = `
+                <div class="card mb-3 server-card" data-server-name="${serverName}">
+                    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0">${serverName} ${serverName === 'main' ? '(主服务器)' : ''}</h6>
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-sm btn-primary add-channel-btn" data-server="${serverName}">
+                                <i class="bi bi-plus"></i> 添加频道
+                        </button>
+                            ${serverName !== 'main' ? `
+                                <button type="button" class="btn btn-sm btn-danger delete-server-btn">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    <input type="text" class="form-control" id="${serverName}_guild_id" name="servers.${serverName}.guild_id" value="${serverConfig.guild_id || ''}">
+                                    <label for="${serverName}_guild_id">服务器 ID</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    <input type="text" class="form-control" id="${serverName}_source_channel_id" name="servers.${serverName}.source_channel_id" value="${serverConfig.source_channel_id || ''}">
+                                    <label for="${serverName}_source_channel_id">源频道 ID</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    <input type="text" class="form-control" id="${serverName}_target_channel_id" name="servers.${serverName}.target_channel_id" value="${serverConfig.target_channel_id || ''}">
+                                    <label for="${serverName}_target_channel_id">目标频道 ID</label>
+                                </div>
+                                    </div>
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    <input type="text" class="form-control" id="${serverName}_main_channel_id" name="servers.${serverName}.main_channel_id" value="${serverConfig.main_channel_id || ''}">
+                                    <label for="${serverName}_main_channel_id">主频道 ID</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    <input type="text" class="form-control" id="${serverName}_backup_channel_id" name="servers.${serverName}.backup_channel_id" value="${serverConfig.backup_channel_id || ''}">
+                                    <label for="${serverName}_backup_channel_id">备份频道 ID</label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-3">
+                            <h6>聊天频道</h6>
+                            <div class="chat-channels-container">
+                                ${Object.entries(serverConfig.chat_channels || {}).map(([channelId, channelConfig]) => `
+                                    <div class="chat-channel-item mb-2 d-flex align-items-center">
+                                        <input type="text" class="form-control form-control-sm me-2" value="${channelId}" readonly>
+                                        <select class="form-select form-select-sm me-2" style="width: 150px;">
+                                            <option value="default" ${channelConfig.preset === 'default' ? 'selected' : ''}>默认预设</option>
+                                            <!-- 其他预设选项会在加载时动态填充 -->
+                                        </select>
+                                        <button type="button" class="btn btn-sm btn-danger delete-channel-btn">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
+                                `).join('')}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+            $('#servers_container').append(serverHtml);
+        }
+
+        // 保存配置
+        $('#saveConfigBtn').click(function() {
+            const config = {
+                token: $('#token').val(),
+                webhook_url: $('#webhook_url').val(),
+                target_language: $('#target_language').val(),
+                servers: {},
+                current_key: parseInt($('#current_key').val()) || 0,
+                gemini_chunk_per_edit: parseInt($('#gemini_chunk_per_edit').val()) || 2,
+                gemini_keys: [],
+                openai_key: $('#openai_key').val(),
+                openai_endpoint: $('#openai_endpoint').val(),
+                openai_models: {}
+            };
+
+            // 收集服务器配置
+            $('.server-card').each(function() {
+                const serverName = $(this).data('server-name');
+                const serverConfig = {
+                    guild_id: $(`#${serverName}_guild_id`).val(),
+                    source_channel_id: $(`#${serverName}_source_channel_id`).val(),
+                    target_channel_id: $(`#${serverName}_target_channel_id`).val(),
+                    main_channel_id: $(`#${serverName}_main_channel_id`).val(),
+                    backup_channel_id: $(`#${serverName}_backup_channel_id`).val(),
+                    chat_channels: {}
+                };
+
+                // 收集聊天频道配置
+                $(this).find('.chat-channel-item').each(function() {
+                    const channelId = $(this).find('input').val();
+                    const preset = $(this).find('select').val();
+                    serverConfig.chat_channels[channelId] = { preset };
                 });
+
+                config.servers[serverName] = serverConfig;
+            });
+
+            // 收集Gemini密钥
+            $('.gemini-key-input').each(function() {
+                const key = $(this).val();
+                if (key) {
+                    config.gemini_keys.push(key);
+                }
+            });
+
+            // 收集OpenAI模型配置
+            $('.model-card').each(function() {
+                const modelName = $(this).data('model-name');
+                config.openai_models[modelName] = {
+                    id: $(this).find('.model-id').val(),
+                    chunk_per_edit: parseInt($(this).find('.chunk-per-edit').val()) || 10
+                };
+            });
+
+            // 保存配置
+            $.ajax({
+                url: '/api/config',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(config),
+                success: function() {
+                    alert('配置已保存');
+                },
+                error: function() {
+                    alert('保存失败');
+                }
+            });
+        });
+
+        // 添加服务器
+        $('#addServerBtn').click(function() {
+            $('#addServerModal').modal('show');
+        });
+
+        $('#confirmAddServerBtn').click(function() {
+            const serverName = $('#new_server_name').val();
+            const guildId = $('#new_server_guild_id').val();
+            const sourceChannelId = $('#new_server_source_channel_id').val();
+            const targetChannelId = $('#new_server_target_channel_id').val();
+            const mainChannelId = $('#new_server_main_channel_id').val();
+            const backupChannelId = $('#new_server_backup_channel_id').val();
+
+            if (!serverName || !guildId) {
+                alert('服务器名称和ID不能为空');
+                    return;
+                }
                 
-                // 填充表单
-                fillFormWithConfig();
-                
-                // 设置事件监听器
-                setupEventListeners();
-                
-            } catch (error) {
-                console.error('获取配置数据失败:', error);
-                alert('获取配置数据失败，请刷新页面重试！');
+            const serverConfig = {
+                guild_id: guildId,
+                source_channel_id: sourceChannelId,
+                target_channel_id: targetChannelId,
+                main_channel_id: mainChannelId,
+                backup_channel_id: backupChannelId,
+                chat_channels: {}
+            };
+
+            addServerToUI(serverName, serverConfig);
+            $('#addServerModal').modal('hide');
+            
+            // 清空表单
+            $('#new_server_name').val('');
+            $('#new_server_guild_id').val('');
+            $('#new_server_source_channel_id').val('');
+            $('#new_server_target_channel_id').val('');
+            $('#new_server_main_channel_id').val('');
+            $('#new_server_backup_channel_id').val('');
+        });
+
+        // 删除服务器
+        $(document).on('click', '.delete-server-btn', function() {
+            if (confirm('确定要删除此服务器吗？')) {
+                $(this).closest('.server-card').remove();
             }
         });
 
-        // 用配置数据填充表单
-        function fillFormWithConfig() {
-            // 基本设置
-            document.getElementById('token').value = configData.token || '';
-            document.getElementById('target_language').value = configData.target_language || 'Chinese';
-            document.getElementById('webhook_url').value = configData.webhook_url || '';
-            
-            // 服务器配置
-            renderServers();
-            
-            // Gemini 设置
-            document.getElementById('current_key').value = configData.current_key || 0;
-            document.getElementById('gemini_chunk_per_edit').value = configData.gemini_chunk_per_edit || 1;
-            renderGeminiKeys();
-            
-            // OpenAI 设置
-            document.getElementById('openai_key').value = configData.openai_key || '';
-            document.getElementById('openai_endpoint').value = configData.openai_endpoint || '';
-            
-            // 渲染模型设置
-            renderAIModels();
+        // 添加Gemini密钥输入框
+        function addGeminiKeyInput(key = '') {
+            const keyHtml = `
+                <div class="input-group mb-2">
+                    <input type="text" class="form-control gemini-key-input" value="${key}" placeholder="输入Gemini API密钥">
+                    <button type="button" class="btn btn-danger delete-key-btn">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+            `;
+            $('#gemini_keys_container').append(keyHtml);
         }
 
-        // 渲染服务器列表和配置
-        function renderServers() {
-            const container = document.getElementById('serverAccordion');
-            container.innerHTML = '';
-            
-            const servers = configData.servers || {};
-            
-            if (Object.keys(servers).length === 0) {
-                container.innerHTML = '<div class="alert alert-info">暂无服务器配置，请添加服务器。</div>';
-                return;
-            }
-            
-            // 为每个服务器创建一个可折叠面板
-            Object.entries(servers).forEach(([serverId, serverConfig], index) => {
-                const serverPanel = document.createElement('div');
-                serverPanel.className = 'accordion-item mb-3';
-                serverPanel.dataset.serverId = serverId;
-                
-                // 创建面板头部
-                const headerId = `heading_${serverId}`;
-                const collapseId = `collapse_${serverId}`;
-                
-                // 自动展开第一个服务器
-                const show = index === 0 ? 'show' : '';
-                
-                serverPanel.innerHTML = `
-                    <h2 class="accordion-header" id="${headerId}">
-                        <button class="accordion-button ${index === 0 ? '' : 'collapsed'}" type="button" data-bs-toggle="collapse"
-                            data-bs-target="#${collapseId}" aria-expanded="${index === 0 ? 'true' : 'false'}" aria-controls="${collapseId}">
-                            ${serverConfig.name || '服务器'}: ${serverId}
+        // 添加模型到UI
+        function addModelToUI(modelName, modelConfig) {
+            const modelHtml = `
+                <div class="card mb-3 model-card" data-model-name="${modelName}">
+                    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0">${modelName}</h6>
+                        <button type="button" class="btn btn-sm btn-danger delete-model-btn">
+                            <i class="bi bi-trash"></i>
                         </button>
-                    </h2>
-                    <div id="${collapseId}" class="accordion-collapse collapse ${show}"
-                        aria-labelledby="${headerId}" data-bs-parent="#serverAccordion">
-                        <div class="accordion-body">
-                            <div class="d-flex justify-content-end mb-3">
-                                <button type="button" class="btn btn-sm btn-danger delete-server-btn" data-server-id="${serverId}">
-                                    <i class="bi bi-trash"></i> 删除服务器
-                                </button>
-                            </div>
-                            
-                            <div class="row g-3 mb-3">
-                                <div class="col-md-6">
-                                    <div class="form-floating">
-                                        <input type="text" class="form-control server-channel-input" id="name_${serverId}" 
-                                            data-server-id="${serverId}" data-field="name" value="${serverConfig.name || ''}">
-                                        <label for="name_${serverId}">服务器名称</label>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="form-floating">
-                                        <input type="text" class="form-control server-channel-input" id="discord_guild_id_${serverId}" 
-                                            data-server-id="${serverId}" data-field="discord_guild_id" value="${serverConfig.discord_guild_id || ''}">
-                                        <label for="discord_guild_id_${serverId}">Discord 服务器 ID</label>
-                                    </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    <input type="text" class="form-control model-id" value="${modelConfig.id || ''}" placeholder="模型ID">
+                                    <label>模型 ID</label>
                                 </div>
                             </div>
-                            
-                            <div class="row g-3 mb-3">
-                                <div class="col-md-6">
-                                    <div class="form-floating">
-                                        <input type="text" class="form-control server-channel-input" id="source_channel_id_${serverId}" 
-                                            data-server-id="${serverId}" data-field="source_channel_id" value="${serverConfig.source_channel_id || ''}">
-                                        <label for="source_channel_id_${serverId}">源频道 ID</label>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="form-floating">
-                                        <input type="text" class="form-control server-channel-input" id="target_channel_id_${serverId}" 
-                                            data-server-id="${serverId}" data-field="target_channel_id" value="${serverConfig.target_channel_id || ''}">
-                                        <label for="target_channel_id_${serverId}">目标频道 ID</label>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="row g-3 mb-4">
-                                <div class="col-md-6">
-                                    <div class="form-floating">
-                                        <input type="text" class="form-control server-channel-input" id="main_channel_id_${serverId}" 
-                                            data-server-id="${serverId}" data-field="main_channel_id" value="${serverConfig.main_channel_id || ''}">
-                                        <label for="main_channel_id_${serverId}">主频道 ID</label>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="form-floating">
-                                        <input type="text" class="form-control server-channel-input" id="backup_channel_id_${serverId}" 
-                                            data-server-id="${serverId}" data-field="backup_channel_id" value="${serverConfig.backup_channel_id || ''}">
-                                        <label for="backup_channel_id_${serverId}">备份频道 ID</label>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="card mb-3">
-                                <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                                    <h5 class="mb-0">聊天频道配置</h5>
-                                    <button type="button" class="btn btn-sm btn-primary add-channel-btn" data-server-id="${serverId}">
-                                        <i class="bi bi-plus"></i> 添加频道
-                                    </button>
-                                </div>
-                                <div class="card-body">
-                                    <div id="chat_channels_container_${serverId}" class="mb-3">
-                                        <!-- 这里会动态添加频道设置 -->
-                                    </div>
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    <input type="number" class="form-control chunk-per-edit" value="${modelConfig.chunk_per_edit || 10}" min="1">
+                                    <label>每次编辑的块数</label>
                                 </div>
                             </div>
                         </div>
                     </div>
-                `;
-                
-                container.appendChild(serverPanel);
-                
-                // 渲染该服务器的聊天频道
-                renderServerChatChannels(serverId, serverConfig.chat_channels || {});
-            });
-            
-            // 添加删除服务器按钮事件
-            document.querySelectorAll('.delete-server-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const serverId = this.dataset.serverId;
-                    if (confirm(`确定要删除服务器 ${serverId} 吗？此操作不可撤销！`)) {
-                        delete configData.servers[serverId];
-                        renderServers();
-                    }
-                });
-            });
-            
-            // 添加服务器频道输入变化事件
-            document.querySelectorAll('.server-channel-input').forEach(input => {
-                input.addEventListener('change', function() {
-                    const serverId = this.dataset.serverId;
-                    const field = this.dataset.field;
-                    configData.servers[serverId][field] = this.value;
-                });
-            });
-            
-            // 添加添加频道按钮事件
-            document.querySelectorAll('.add-channel-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const serverId = this.dataset.serverId;
-                    document.getElementById('current_server_id').value = serverId;
-                    const modal = new bootstrap.Modal(document.getElementById('addChannelModal'));
-                    modal.show();
-                });
-            });
+                </div>
+            `;
+            $('#ai_models_container').append(modelHtml);
         }
-        
-        // 渲染服务器的聊天频道
-        function renderServerChatChannels(serverId, chatChannels) {
-            const container = document.getElementById(`chat_channels_container_${serverId}`);
-            container.innerHTML = '';
-            
-            if (Object.keys(chatChannels).length === 0) {
-                container.innerHTML = '<div class="alert alert-info">暂无聊天频道配置，请添加。</div>';
+
+        // 添加Gemini密钥按钮点击事件
+        $('#addGeminiKeyBtn').click(function() {
+            addGeminiKeyInput();
+        });
+
+        // 删除Gemini密钥
+        $(document).on('click', '.delete-key-btn', function() {
+            if (confirm('确定要删除此密钥吗？')) {
+                $(this).closest('.input-group').remove();
+            }
+        });
+
+        // 添加模型按钮点击事件
+        $('#addModelBtn').click(function() {
+            $('#addModelModal').modal('show');
+        });
+
+        // 确认添加模型
+        $('#confirmAddModelBtn').click(function() {
+            const modelName = $('#new_model_name').val();
+            const modelId = $('#new_model_id').val();
+            const chunkPerEdit = $('#new_model_chunk_per_edit').val();
+
+            if (!modelName || !modelId) {
+                alert('模型名称和ID不能为空');
                 return;
             }
-            
-            Object.entries(chatChannels).forEach(([channelId, channelConfig]) => {
-                    const channelRow = document.createElement('div');
-                    channelRow.className = 'chat-channel-item card mb-2';
-                    channelRow.dataset.channelId = channelId;
-                channelRow.dataset.serverId = serverId;
-                
-                // 判断是否是主频道
-                const isMainChannel = configData.servers[serverId] && 
-                                     configData.servers[serverId].main_channel_id === channelId;
-                    
-                    channelRow.innerHTML = `
-                        <div class="card-body p-3">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                <h6 class="mb-0">频道 ID: ${channelId} ${isMainChannel ? '<span class="badge bg-primary">主频道</span>' : ''}</h6>
-                                <p class="mb-0 text-muted small">预设: ${channelConfig.preset || 'default'}</p>
-                                </div>
-                            <button type="button" class="btn btn-sm btn-danger delete-channel-btn" 
-                                data-channel-id="${channelId}" data-server-id="${serverId}" ${isMainChannel ? 'disabled' : ''}>
-                                    <i class="bi bi-trash"></i>
-                                </button>
-                            </div>
-                        </div>
-                    `;
-                    
-                    container.appendChild(channelRow);
-                });
-                
-            // 使用统一的函数绑定删除按钮事件
-            addDeleteChannelEvents();
-        }
 
-        // 添加删除频道按钮事件
-        function addDeleteChannelEvents() {
-                document.querySelectorAll('.delete-channel-btn').forEach(btn => {
-                    btn.addEventListener('click', function() {
-                        const channelId = this.dataset.channelId;
-                    const serverId = this.dataset.serverId;
-                    
-                    // 检查是否是主频道
-                    if (configData.servers[serverId] && 
-                        configData.servers[serverId].main_channel_id === channelId) {
-                        alert("无法删除主频道，请先设置其他频道为主频道");
-                        return;
-                    }
-                    
-                    if (confirm(`确定要删除此频道配置吗？ID: ${channelId}`)) {
-                        delete configData.servers[serverId].chat_channels[channelId];
-                        renderServerChatChannels(serverId, configData.servers[serverId].chat_channels);
-                        }
-                    });
-                });
-        }
+            const modelConfig = {
+                id: modelId,
+                chunk_per_edit: parseInt(chunkPerEdit) || 10
+            };
 
-        // 渲染 Gemini API 密钥
-        function renderGeminiKeys() {
-            const container = document.getElementById('gemini_keys_container');
-            container.innerHTML = '';
+            addModelToUI(modelName, modelConfig);
+            $('#addModelModal').modal('hide');
             
-            if (configData.gemini_keys && configData.gemini_keys.length > 0) {
-                configData.gemini_keys.forEach((key, index) => {
-                    const keyItem = document.createElement('div');
-                    keyItem.className = 'input-group mb-2';
-                    keyItem.innerHTML = `
-                        <span class="input-group-text">密钥 ${index + 1}</span>
-                        <input type="text" class="form-control gemini-key-input" value="${key}" data-index="${index}">
-                        <button class="btn btn-outline-danger delete-key-btn" type="button" data-index="${index}">
-                            <i class="bi bi-trash"></i>
-                        </button>
-                    `;
-                    container.appendChild(keyItem);
-                });
-                
-                // 添加密钥输入变化事件
-                document.querySelectorAll('.gemini-key-input').forEach(input => {
-                    input.addEventListener('change', function() {
-                        const index = parseInt(this.dataset.index);
-                        configData.gemini_keys[index] = this.value;
-                    });
-                });
-                
-                // 添加删除按钮事件
-                document.querySelectorAll('.delete-key-btn').forEach(btn => {
-                    btn.addEventListener('click', function() {
-                        const index = parseInt(this.dataset.index);
-                        configData.gemini_keys.splice(index, 1);
-                        renderGeminiKeys();
-                    });
-                });
-            } else {
-                container.innerHTML = '<div class="alert alert-info">暂无 Gemini API 密钥，请添加。</div>';
-                configData.gemini_keys = [];
+            // 清空表单
+            $('#new_model_name').val('');
+            $('#new_model_id').val('');
+            $('#new_model_chunk_per_edit').val('10');
+        });
+
+        // 删除模型
+        $(document).on('click', '.delete-model-btn', function() {
+            if (confirm('确定要删除此模型吗？')) {
+                $(this).closest('.model-card').remove();
             }
-        }
+        });
 
-        // 渲染 AI 模型设置
-        function renderAIModels() {
-            const container = document.getElementById('ai_models_container');
-            container.innerHTML = '';
-            
-            if (configData.openai_models && Object.keys(configData.openai_models).length > 0) {
-                Object.entries(configData.openai_models).forEach(([modelName, modelConfig]) => {
-                    const modelRow = document.createElement('div');
-                    modelRow.className = 'ai-model-item card mb-2';
-                    modelRow.dataset.modelName = modelName;
-                    
-                    modelRow.innerHTML = `
-                        <div class="card-body p-3">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <div>
-                                    <h6 class="mb-0">模型名称: ${modelName}</h6>
-                                </div>
-                                <button type="button" class="btn btn-sm btn-danger delete-model-btn" data-model-name="${modelName}">
-                                    <i class="bi bi-trash"></i>
-                                </button>
-                            </div>
-                            <div class="row g-2">
-                                <div class="col-md-8">
-                                    <div class="input-group input-group-sm">
-                                        <span class="input-group-text">模型 ID</span>
-                                        <input type="text" class="form-control model-id-input" data-model-name="${modelName}" value="${modelConfig.id || ''}">
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="input-group input-group-sm">
-                                        <span class="input-group-text">块数</span>
-                                        <input type="number" class="form-control model-chunk-input" data-model-name="${modelName}" value="${modelConfig.chunk_per_edit || 10}" min="1">
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                    
-                    container.appendChild(modelRow);
-                });
-                
-                // 添加模型输入变化事件
-                document.querySelectorAll('.model-id-input').forEach(input => {
-                    input.addEventListener('change', function() {
-                        const modelName = this.dataset.modelName;
-                        configData.openai_models[modelName].id = this.value;
-                    });
-                });
-                
-                document.querySelectorAll('.model-chunk-input').forEach(input => {
-                    input.addEventListener('change', function() {
-                        const modelName = this.dataset.modelName;
-                        configData.openai_models[modelName].chunk_per_edit = parseInt(this.value);
-                    });
-                });
-                
-                // 添加删除按钮事件
-                document.querySelectorAll('.delete-model-btn').forEach(btn => {
-                    btn.addEventListener('click', function() {
-                        const modelName = this.dataset.modelName;
-                        if (confirm(`确定要删除模型 ${modelName} 吗？`)) {
-                            delete configData.openai_models[modelName];
-                            renderAIModels();
-                        }
-                    });
-                });
-            } else {
-                container.innerHTML = '<div class="alert alert-info">暂无 AI 模型配置，请添加。</div>';
-                configData.openai_models = {};
-            }
-        }
+        // 添加频道
+        $(document).on('click', '.add-channel-btn', function() {
+            const serverName = $(this).data('server');
+            $('#new_channel_server').val(serverName);
+            $('#addChannelModal').modal('show');
+        });
 
-        // 设置事件监听器
-        function setupEventListeners() {
-            // 添加服务器按钮
-            document.getElementById('addServerBtn').addEventListener('click', function() {
-                const modal = new bootstrap.Modal(document.getElementById('addServerModal'));
-                modal.show();
-            });
-            
-            // 确认添加服务器按钮
-            document.getElementById('confirmAddServerBtn').addEventListener('click', function() {
-                const serverId = document.getElementById('new_server_id').value.trim();
-                const serverName = document.getElementById('new_server_name').value.trim();
-                const discordGuildId = document.getElementById('new_discord_guild_id').value.trim();
-                
-                if (!serverId) {
-                    alert('请输入服务器 ID');
-                    return;
-                }
-                
-                if (!serverName) {
-                    alert('请输入服务器名称');
-                    return;
-                }
-                
-                if (!discordGuildId) {
-                    alert('请输入Discord 服务器 ID');
-                    return;
-                }
-                
-                if (!configData.servers) {
-                    configData.servers = {};
-                }
-                
-                if (configData.servers[serverId]) {
-                    alert(`服务器 ID '${serverId}' 已存在，请使用其他 ID`);
-                    return;
-                }
-                
-                // 创建新服务器配置
-                configData.servers[serverId] = {
-                    source_channel_id: "",
-                    target_channel_id: "",
-                    main_channel_id: "",
-                    backup_channel_id: "",
-                    chat_channels: {}
-                };
-                
-                configData.servers[serverId].name = serverName;
-                configData.servers[serverId].discord_guild_id = discordGuildId;
-                
-                // 刷新显示
-                renderServers();
-                
-                // 关闭模态框
-                bootstrap.Modal.getInstance(document.getElementById('addServerModal')).hide();
-                
-                // 清空输入
-                document.getElementById('new_server_id').value = '';
-                document.getElementById('new_server_name').value = '';
-                document.getElementById('new_discord_guild_id').value = '';
-            });
-            
-            // 确认添加频道按钮
-            document.getElementById('confirmAddChannelBtn').addEventListener('click', function() {
-                const serverId = document.getElementById('current_server_id').value;
-                const channelId = document.getElementById('new_channel_id').value.trim();
-                const preset = document.getElementById('new_channel_preset').value;
-                
-                if (!channelId) {
-                    alert('请输入频道 ID');
-                    return;
-                }
-                
-                if (!configData.servers[serverId].chat_channels) {
-                    configData.servers[serverId].chat_channels = {};
-                }
-                
-                configData.servers[serverId].chat_channels[channelId] = { preset };
-                
-                // 刷新显示
-                renderServerChatChannels(serverId, configData.servers[serverId].chat_channels);
-                
-                // 关闭模态框
-                bootstrap.Modal.getInstance(document.getElementById('addChannelModal')).hide();
-                
-                // 清空输入
-                document.getElementById('new_channel_id').value = '';
-            });
-            
-            // 添加 Gemini API 密钥按钮
-            document.getElementById('addGeminiKeyBtn').addEventListener('click', function() {
-                if (!configData.gemini_keys) {
-                    configData.gemini_keys = [];
-                }
-                
-                configData.gemini_keys.push('');
-                renderGeminiKeys();
-                
-                // 聚焦到新添加的输入框
-                const inputs = document.querySelectorAll('.gemini-key-input');
-                if (inputs.length > 0) {
-                    inputs[inputs.length - 1].focus();
-                }
-            });
-            
-            // 添加模型按钮
-            document.getElementById('addModelBtn').addEventListener('click', function() {
-                const modal = new bootstrap.Modal(document.getElementById('addModelModal'));
-                modal.show();
-            });
-            
-            // 确认添加模型按钮
-            document.getElementById('confirmAddModelBtn').addEventListener('click', function() {
-                const modelName = document.getElementById('new_model_name').value.trim();
-                const modelId = document.getElementById('new_model_id').value.trim();
-                const chunkPerEdit = parseInt(document.getElementById('new_model_chunk_per_edit').value);
-                
-                if (!modelName) {
-                    alert('请输入模型名称');
-                    return;
-                }
-                
-                if (!modelId) {
-                    alert('请输入模型 ID');
-                    return;
-                }
-                
-                if (!configData.openai_models) {
-                    configData.openai_models = {};
-                }
-                
-                configData.openai_models[modelName] = {
-                    id: modelId,
-                    chunk_per_edit: chunkPerEdit
-                };
-                
-                // 刷新显示
-                renderAIModels();
-                
-                // 关闭模态框
-                bootstrap.Modal.getInstance(document.getElementById('addModelModal')).hide();
-                
-                // 清空输入
-                document.getElementById('new_model_name').value = '';
-                document.getElementById('new_model_id').value = '';
-                document.getElementById('new_model_chunk_per_edit').value = '10';
-            });
-            
-            // 保存配置按钮
-            document.getElementById('saveConfigBtn').addEventListener('click', saveConfig);
-        }
-
-        // 从表单中收集数据
-        function collectFormData() {
-            // 基本设置
-            configData.token = document.getElementById('token').value;
-            configData.target_language = document.getElementById('target_language').value;
-            configData.webhook_url = document.getElementById('webhook_url').value;
-            
-            // Gemini 设置
-            configData.current_key = parseInt(document.getElementById('current_key').value);
-            configData.gemini_chunk_per_edit = parseInt(document.getElementById('gemini_chunk_per_edit').value);
-            
-            // OpenAI 设置
-            configData.openai_key = document.getElementById('openai_key').value;
-            configData.openai_endpoint = document.getElementById('openai_endpoint').value;
-            
-            return configData;
-        }
-
-        // 保存配置
-        async function saveConfig() {
-            try {
-                const updatedConfig = collectFormData();
-                
-                const response = await fetch('/api/config', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(updatedConfig)
-                });
-                
-                if (response.ok) {
-                    // 显示保存成功提示
-                    const toast = new bootstrap.Toast(document.getElementById('saveToast'));
-                    toast.show();
-                } else {
-                    alert('保存配置失败！');
-                }
-            } catch (error) {
-                console.error('保存配置失败:', error);
-                alert('保存配置失败，请重试！');
-            }
-        }
+        // 页面加载完成后执行
+        $(document).ready(function() {
+            loadConfig();
+        });
     </script>
 </body>
 </html> 

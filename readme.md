@@ -9,6 +9,14 @@ pinned: false
 
 # Img Forwarder (图片转发机器人)
 
+[![Hugging Face Spaces](https://img.shields.io/badge/Hugging%20Face-Spaces-blue)](https://huggingface.co/spaces/fuwei99/img_forwarder)
+[![GitHub](https://img.shields.io/badge/GitHub-Repository-blue)](https://github.com/fuwei99/img_forwarder)
+
+## 最新更新
+
+* **多服务支持**：现在支持多个Discord服务器的配置管理
+* **网络配置**：增加了网络端口5000的配置功能，通过Web界面可更方便地管理机器人
+
 ## [中文版]
 
 这是一个功能丰富的 Discord 机器人，最初设计用于将图片从一个频道转发到图库频道，但现已演变为包含多种 AI 集成和实用功能的综合工具。
@@ -24,6 +32,13 @@ pinned: false
 - **关键词响应**：自动回复配置的触发词
 - **管理命令**：提供多种机器人管理的管理员命令
 - **Web 界面**：提供直观的配置和预设管理界面
+- **多服务器支持**：支持在多个Discord服务器上同时工作
+
+### 一键部署
+
+你可以通过以下链接一键部署到 Hugging Face Spaces：
+
+[![Deploy to Hugging Face](https://huggingface.co/datasets/huggingface/badges/raw/main/deploy-to-huggingface.svg)](https://huggingface.co/spaces/fuwei99/img_forwarder)
 
 ### 安装设置
 
@@ -47,8 +62,6 @@ python main.py
 ### Hugging Face Space 部署
 
 本项目可以在 Hugging Face Space 上部署：
-
-[![Deploy to Hugging Face](https://img.shields.io/badge/Deploy%20to-Hugging%20Face-blue)](https://huggingface.co/spaces/fuwei99/img_forwarder)
 
 1. 在 Hugging Face 上创建一个新的 Space，选择 Docker 作为 SDK
 2. 上传项目代码到 Space
@@ -128,10 +141,34 @@ python main.py  # 或 ./start.bat
 ```json
 {
     "token": "你的机器人令牌", 
-    "target_channel_id": 123, // 图库频道
-    "source_channel_id": 123, // 图片分享频道
-    "chat_channel_id": 123, // 自动回复、备份和 AI 功能工作的频道
-    "backup_channel_id": 123, 
+    "servers": {
+        "server_1": {
+            "name": "主服务器",
+            "discord_guild_id": "服务器ID",
+            "target_channel_id": 123456789, // 图库频道
+            "source_channel_id": 123456789, // 图片分享频道
+            "main_channel_id": 123456789, // 自动回复、备份和 AI 功能工作的频道
+            "backup_channel_id": 123456789,
+            "chat_channels": {
+                "频道ID": {
+                    "preset": "default"
+                }
+            }
+        },
+        "server_2": {
+            "name": "第二服务器",
+            "discord_guild_id": "服务器ID",
+            "target_channel_id": 123456789,
+            "source_channel_id": 123456789,
+            "main_channel_id": 123456789,
+            "backup_channel_id": 123456789,
+            "chat_channels": {
+                "频道ID": {
+                    "preset": "default"
+                }
+            }
+        }
+    },
     "gemini_keys": [
         "你的_GEMINI_密钥",
         "你的_GEMINI_密钥",
@@ -213,8 +250,6 @@ Or use the batch file:
 ## Hugging Face Space Deployment
 
 This project can be deployed on Hugging Face Space:
-
-[![Deploy to Hugging Face](https://img.shields.io/badge/Deploy%20to-Hugging%20Face-blue)](https://huggingface.co/spaces/fuwei99/img_forwarder)
 
 1. Create a new Space on Hugging Face and select Docker as the SDK
 2. Upload the project code to Space
