@@ -1,9 +1,13 @@
+---
+title: Img Forwarder (图片转发机器人)
+emoji: 🖼️
+colorFrom: indigo
+colorTo: blue
+sdk: docker
+pinned: false
+---
+
 # Img Forwarder (图片转发机器人)
-
-## 最新更新
-
-- **多服务支持**：现在支持多个Discord服务器的配置管理
-- **网络配置**：增加了网络端口5000的配置功能，通过Web界面可更方便地管理机器人
 
 ## [中文版]
 
@@ -20,7 +24,6 @@
 - **关键词响应**：自动回复配置的触发词
 - **管理命令**：提供多种机器人管理的管理员命令
 - **Web 界面**：提供直观的配置和预设管理界面
-- **多服务器支持**：支持在多个Discord服务器上同时工作
 
 ### 安装设置
 
@@ -40,6 +43,20 @@ python main.py
 ```bash
 ./start.bat
 ```
+
+### Hugging Face Space 部署
+
+本项目可以在 Hugging Face Space 上部署：
+
+[![Deploy to Hugging Face](https://img.shields.io/badge/Deploy%20to-Hugging%20Face-blue)](https://huggingface.co/spaces/fuwei99/img_forwarder)
+
+1. 在 Hugging Face 上创建一个新的 Space，选择 Docker 作为 SDK
+2. 上传项目代码到 Space
+3. 修改 `config.json` 文件，填入你的 Discord 令牌和 API 密钥
+4. Space 将自动构建并启动机器人
+5. 你可以通过 Space 的 Web 界面访问机器人的配置界面
+
+**注意**：项目已经内置了自动保活功能，会定期自我请求以保持 Space 活跃。
 
 ### GitHub 部署
 
@@ -96,19 +113,8 @@ python main.py  # 或 ./start.bat
 
 启动机器人后，可通过 http://127.0.0.1:5000 访问 Web 管理界面：
 - `/` - 主页
-- `/config` - 配置设置页面，支持多服务器配置和网络端口设置
+- `/config` - 配置设置页面
 - `/presets` - 预设管理页面
-
-#### 多服务器配置
-在Web界面中，您可以管理多个Discord服务器的配置：
-- 添加新服务器：在配置页面中添加新的服务器配置
-- 编辑现有服务器：修改服务器名称、ID和频道设置
-- 删除服务器：移除不再需要的服务器配置
-
-#### 网络设置
-机器人默认使用5000端口运行Web界面。您可以通过修改源代码中的端口配置进行自定义：
-- 主机地址：默认为127.0.0.1（本地访问）
-- 端口：默认为5000
 
 ### 配置
 
@@ -122,34 +128,10 @@ python main.py  # 或 ./start.bat
 ```json
 {
     "token": "你的机器人令牌", 
-    "servers": {
-        "server_1": {
-            "name": "主服务器",
-            "discord_guild_id": "服务器ID",
-            "target_channel_id": 123456789, // 图库频道
-            "source_channel_id": 123456789, // 图片分享频道
-            "main_channel_id": 123456789, // 自动回复、备份和 AI 功能工作的频道
-            "backup_channel_id": 123456789,
-            "chat_channels": {
-                "频道ID": {
-                    "preset": "default"
-                }
-            }
-        },
-        "server_2": {
-            "name": "副服务器",
-            "discord_guild_id": "服务器ID",
-            "target_channel_id": 123456789,
-            "source_channel_id": 123456789,
-            "main_channel_id": 123456789,
-            "backup_channel_id": 123456789,
-            "chat_channels": {
-                "频道ID": {
-                    "preset": "default"
-                }
-            }
-        }
-    },
+    "target_channel_id": 123, // 图库频道
+    "source_channel_id": 123, // 图片分享频道
+    "chat_channel_id": 123, // 自动回复、备份和 AI 功能工作的频道
+    "backup_channel_id": 123, 
     "gemini_keys": [
         "你的_GEMINI_密钥",
         "你的_GEMINI_密钥",
@@ -195,11 +177,6 @@ python main.py  # 或 ./start.bat
 
 # Img Forwarder
 
-## Latest Updates
-
-- **Multi-server Support**: Now supports configuration management for multiple Discord servers
-- **Network Configuration**: Added network port 5000 configuration functionality, making bot management more convenient through the Web interface
-
 This Discord bot was initially created for forwarding images from one channel to a gallery, but has evolved to include multiple AI integration and utility functions.
 
 ## Features
@@ -213,7 +190,6 @@ This Discord bot was initially created for forwarding images from one channel to
 - **Keyword Response**: Automatically responds to configured trigger words
 - **Admin Commands**: Various administrative commands for bot management
 - **Web Interface**: Intuitive configuration and preset management interface
-- **Multi-server Support**: Support working on multiple Discord servers
 
 ## Setup
 
@@ -233,6 +209,20 @@ Or use the batch file:
 ```bash
 ./start.bat
 ```
+
+## Hugging Face Space Deployment
+
+This project can be deployed on Hugging Face Space:
+
+[![Deploy to Hugging Face](https://img.shields.io/badge/Deploy%20to-Hugging%20Face-blue)](https://huggingface.co/spaces/fuwei99/img_forwarder)
+
+1. Create a new Space on Hugging Face and select Docker as the SDK
+2. Upload the project code to Space
+3. Modify the `config.json` file to fill in your Discord token and API keys
+4. Space will automatically build and start the bot
+5. You can access the bot's configuration interface through Space's Web interface
+
+**Note**: The project has built-in auto-alive functionality, which periodically self-requests to keep Space active.
 
 ## GitHub Deployment
 
@@ -289,65 +279,36 @@ python main.py  # or ./start.bat
 
 After starting the bot, access the web management interface at http://127.0.0.1:5000:
 - `/` - Home page
-- `/config` - Configuration settings page, supports multi-server configuration and network port settings
+- `/config` - Configuration settings page
 - `/presets` - Preset management page
-
-### Multi-server Configuration
-In the Web interface, you can manage configurations for multiple Discord servers:
-- Add new servers: Add new server configurations in the configuration page
-- Edit existing servers: Modify server names, IDs, and channel settings
-- Delete servers: Remove server configurations that are no longer needed
-
-### Network Settings
-The bot runs the Web interface on port 5000 by default. You can customize this by modifying the port configuration in the source code:
-- Host address: Default is 127.0.0.1 (local access)
-- Port: Default is 5000
 
 ## Configuration
 
 The bot requires a config.json file with the following structure:
+- Discord token
+- Channel IDs
+- API keys for Gemini and OpenAI
+
+One possible `config.json`:
+
 ```json
 {
     "token": "YOUR_BOT_TOKEN", 
-    "servers": {
-        "server_1": {
-            "name": "Main Server",
-            "discord_guild_id": "SERVER_ID",
-            "target_channel_id": 123456789, // gallery channel
-            "source_channel_id": 123456789, // image sharing channel
-            "main_channel_id": 123456789, // channel for auto-responses, backups, and AI features
-            "backup_channel_id": 123456789,
-            "chat_channels": {
-                "CHANNEL_ID": {
-                    "preset": "default"
-                }
-            }
-        },
-        "server_2": {
-            "name": "Secondary Server",
-            "discord_guild_id": "SERVER_ID",
-            "target_channel_id": 123456789,
-            "source_channel_id": 123456789,
-            "main_channel_id": 123456789,
-            "backup_channel_id": 123456789,
-            "chat_channels": {
-                "CHANNEL_ID": {
-                    "preset": "default"
-                }
-            }
-        }
-    },
+    "target_channel_id": 123, // the gallery channel
+    "source_channel_id": 123, // the img-sharing channel
+    "chat_channel_id": 123, // auto-responding, backup and ai functions are working for this channel
+    "backup_channel_id": 123, 
     "gemini_keys": [
         "YOUR_GEMINI_KEY",
         "YOUR_GEMINI_KEY",
         "YOUR_GEMINI_KEY",
     ],
-    "gemini_chunk_per_edit": 2, // recommended to set to 2, 3 is also fine
-    "current_key": -1, // can be set to any number, used for state tracking
-    "target_language": "English", // default target language for AI translation
-    "webhook_url": "YOUR_WEBHOOK_URL", // webhook set up for chat channel, used for AI features
+    "gemini_chunk_per_edit": 2, // 2 is recommended, 3 is ok
+    "current_key": -1, // set to any number will work, it's used for status recording
+    "target_language": "Chinese", // the default target language for ai translation
+    "webhook_url": "YOUR_WEB_HOOK_URL", // set up a webhook for the chat channel and this's used for the ai functions
     "openai_key": "OPENAI_KEY",
-    "openai_endpoint": "OPENAI_ENDPOINT", // your OpenAI endpoint, should end with `/v1`, allows use of any OpenAI format model
+    "openai_endpoint": "OPENAI_ENDPOINT", // your openai endpoint, and it should end with `/v1`. thus, this allows you to use any other models with an openai format
     "openai_models": {
         "grok": {
             "id": "grok/grok-3",
@@ -362,7 +323,7 @@ The bot requires a config.json file with the following structure:
             "chunk_per_edit": 10
         },
         "AI_NAME": {
-            "id": "MODEL_NAME_FROM_LIST",
+            "id": "YOUR_MODEL_NAME_IN_THE_MODEL_LIST",
             "chunk_per_edit": 10
         }
     }
